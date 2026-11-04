@@ -8,13 +8,13 @@
   </div></header>
   <main class="wrap staff-main">
     <h1>Order overview</h1>
-    <p class="staff-sub">Requests appear when someone clicks Continue to WhatsApp. They are not confirmed orders until you verify the WhatsApp message and update the status.</p>
+    <p class="staff-sub">Orders are confirmed automatically after Razorpay verifies captured payment. Pending orders are not on the delivery list.</p>
     {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="alert">{{ message }}</div>{% endfor %}{% endwith %}
     <section class="stat-grid" aria-label="Order statistics">
-      <div class="stat"><small>Total requests</small><strong>{{ stats.requests }}</strong></div>
+      <div class="stat"><small>Total checkouts</small><strong>{{ stats.requests }}</strong></div>
       <div class="stat"><small>Confirmed subscriptions</small><strong>{{ stats.confirmed }}</strong></div>
-      <div class="stat"><small>Marked paid</small><strong>{{ stats.paid }}</strong></div>
-      <div class="stat"><small>Confirmed value</small><strong>₹{{ '{:,}'.format(stats.booked_value) }}</strong></div>
+      <div class="stat"><small>Verified paid</small><strong>{{ stats.paid }}</strong></div>
+      <div class="stat"><small>Captured value</small><strong>₹{{ '{:,}'.format(stats.booked_value) }}</strong></div>
     </section>
 
     <section class="staff-card" aria-labelledby="delivery-heading">
@@ -32,7 +32,7 @@
     </section>
 
     <section class="staff-card" aria-labelledby="orders-heading">
-      <div class="staff-heading"><h2 id="orders-heading">All order requests</h2><a class="gray-link" href="{{ url_for('export_orders') }}">Download all orders CSV</a></div>
+      <div class="staff-heading"><h2 id="orders-heading">All orders / payment attempts</h2><a class="gray-link" href="{{ url_for('export_orders') }}">Download all orders CSV</a></div>
       <form method="get" action="{{ url_for('staff_dashboard') }}" class="staff-filter">
         <input type="search" name="q" value="{{ q }}" placeholder="Name, phone, flat or reference" aria-label="Search orders">
         <select name="status" aria-label="Filter by status"><option value="all">All statuses</option>{% for status in statuses %}<option value="{{ status }}" {% if status_filter == status %}selected{% endif %}>{{ status|replace('_', ' ')|title }}</option>{% endfor %}</select>
@@ -43,12 +43,12 @@
           <td><strong>{{ order.name }}</strong><span class="muted">{{ order.order_ref }}</span><br>{{ order.phone }}<br>{{ order.tower }} · {{ order.flat }}<br><span class="muted">{{ order.created_at[0:16]|replace('T',' ') }} IST</span></td>
           <td>{{ slots[order.delivery_slot] }}<br><span class="muted">Start {{ order.start_date }}</span></td>
           <td><strong>{{ order.plan_days }} days</strong>₹{{ '{:,}'.format(order.price) }}</td>
-          <td><span class="tag {{ 'positive' if order.status in ('confirmed','completed') else 'pending' }}">{{ order.status|replace('_', ' ')|title }}</span><br><span class="tag {{ 'positive' if order.payment_status == 'paid' else 'pending' }}">{{ order.payment_status|title }}</span></td>
+          <td><span class="tag {{ 'positive' if order.status in ('confirmed','completed') else 'pending' }}">{{ order.status|replace('_', ' ')|title }}</span><br><span class="tag {{ 'positive' if order.payment_status == 'paid' else 'pending' }}">{{ order.payment_status|title }}</span><br>{% if order.razorpay_payment_id %}<span class="muted" style="font-size:10px">{{ order.razorpay_payment_id }}</span>{% endif %}</td>
           <td>
             <form class="staff-edit" action="{{ url_for('update_order', order_ref=order.order_ref) }}" method="post">
               <input type="hidden" name="csrf_token" value="{{ csrf }}">
               <select name="status" aria-label="Order status">{% for s in statuses %}<option value="{{ s }}" {% if order.status==s %}selected{% endif %}>{{ s|replace('_',' ')|title }}</option>{% endfor %}</select>
-              <select name="payment_status" aria-label="Payment status"><option value="unpaid" {% if order.payment_status=='unpaid' %}selected{% endif %}>Unpaid</option><option value="paid" {% if order.payment_status=='paid' %}selected{% endif %}>Paid</option></select>
+              <span class="tag {{ 'positive' if order.payment_status == 'paid' else 'pending' }}" title="Only Razorpay can mark orders paid">{{ order.payment_status|title }}</span>
               <input name="notes" value="{{ order.notes }}" maxlength="500" placeholder="Staff notes" aria-label="Staff notes"><button type="submit">Save</button>
             </form>
           </td>
