@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f7f7f5">
-  <meta name="description" content="PureFruit: naturally fresh 300 ml juice delivered at L&T Serene County. Order a fixed weekday subscription on WhatsApp.">
+  <meta name="description" content="PureFruit: naturally fresh 300 ml juice delivered at L&T Serene County. Order and pay online for a fixed weekday subscription.">
   <meta name="csrf-token" content="{{ csrf }}">
   <title>PureFruit · Naturally Fresh</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body data-preview="false">
+<body data-preview="false" data-payments-ready="{{ 'true' if razorpay_ready else 'false' }}">
   <header class="topbar wrap">
-    <a href="#top" class="brand" aria-label="PureFruit home">PureFruit<span class="brand-leaf" aria-hidden="true"><svg viewBox="0 0 30 30"><path d="M5 23Q6 7 26 4Q26 21 9 24" fill="#777"/><path d="M6 25Q14 15 24 8" fill="none" stroke="#fff" stroke-width="1.6"/></svg></span></a>
+    <a href="#top" class="brand" aria-label="PureFruit home">PureFruit<span class="brand-leaf" aria-hidden="true"><svg viewBox="0 0 30 30"><path d="M5 23Q6 7 26 4Q26 21 9 24" fill="#69A357"/><path d="M6 25Q14 15 24 8" fill="none" stroke="#fff" stroke-width="1.6"/></svg></span></a>
     <span class="top-promise">HEALTHIER<br>HAPPIER YOU</span>
   </header>
 
@@ -51,7 +51,7 @@
     </section>
 
     <section class="wrap order-section" id="order" aria-labelledby="order-heading">
-      <div class="section-heading"><h2 id="order-heading">ORDER YOUR SUBSCRIPTION</h2><span>Quick ordering on WhatsApp</span></div>
+      <div class="section-heading"><h2 id="order-heading">ORDER YOUR SUBSCRIPTION</h2><span>Secure online checkout</span></div>
       <div class="order-grid">
         <form id="order-form" class="order-panel" novalidate>
           <fieldset class="field-group plan-group">
@@ -85,8 +85,9 @@
           </fieldset>
           <input class="invisible-field" name="website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
           <div id="form-error" class="form-error" role="alert" hidden></div>
-          <button class="button button-dark button-submit" type="submit" id="submit-order">Continue to WhatsApp <span aria-hidden="true">↗</span></button>
-          <p class="after-submit">Your details are saved as a request, then WhatsApp opens with a ready-to-send message. <strong>Please tap Send in WhatsApp.</strong> Your subscription is confirmed only after our team replies.</p>
+          <button class="button button-dark button-submit" type="submit" id="submit-order">Pay securely <span aria-hidden="true">↗</span></button>
+          <p class="after-submit">Secure payment powered by Razorpay. Your subscription is confirmed only after successful payment verification. Payment methods depend on your Razorpay account.</p>
+          {% if not razorpay_ready %}<p class="form-error">Online checkout is not yet enabled. Please try later.</p>{% endif %}
           <div id="form-success" class="form-success" role="status" hidden></div>
         </form>
 
@@ -107,6 +108,7 @@
   </main>
 
   <footer class="footer"><div class="wrap footer-inner"><div><strong class="footer-brand">PureFruit</strong><span>Naturally Fresh.</span></div><div>Real fruit. Real people. A healthier tomorrow.</div><div>© PureFruit · <a href="https://www.purefruit.in">purefruit.in</a></div></div></footer>
+  <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
   <script src="{{ url_for('static', filename='app.js') }}" defer></script>
 </body>
 </html>
