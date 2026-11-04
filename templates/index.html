@@ -7,11 +7,11 @@
   <meta name="description" content="PureFruit: naturally fresh 300 ml juice delivered at L&T Serene County. Order and pay online for a fixed weekday subscription.">
   <meta name="csrf-token" content="{{ csrf }}">
   <title>PureFruit · Naturally Fresh</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='visual-2') }}">
 </head>
 <body data-preview="false" data-payments-ready="{{ 'true' if razorpay_ready else 'false' }}">
   <header class="topbar wrap">
-    <a href="#top" class="brand" aria-label="PureFruit home">PureFruit<span class="brand-leaf" aria-hidden="true"><svg viewBox="0 0 30 30"><path d="M5 23Q6 7 26 4Q26 21 9 24" fill="#69A357"/><path d="M6 25Q14 15 24 8" fill="none" stroke="#fff" stroke-width="1.6"/></svg></span></a>
+    <a href="#top" class="brand brand-logo" aria-label="PureFruit home"><img src="{{ url_for('static', filename='fruit/purefruit-logo.webp', v='visual-2') }}" alt="PureFruit — Naturally Fresh" width="920" height="360" decoding="async"></a>
     <span class="top-promise">HEALTHIER<br>HAPPIER YOU</span>
   </header>
 
@@ -26,20 +26,17 @@
           <span class="hero-small">300 ml per bottle<br>Monday – Friday</span>
         </div>
       </div>
-      <div class="hero-art" aria-hidden="true">
-        <div class="hero-juice"><img src="{{ url_for('static', filename='fruit/mosambi.svg') }}" alt="" width="220" height="185"></div>
-        <div class="hero-art-word">100% real fruit</div>
-      </div>
+      <div class="hero-art"><div class="hero-juice"><img src="{{ url_for('static', filename='fruit/purefruit-bottle.webp', v='visual-2') }}" alt="PureFruit 300 ml juice bottle" width="498" height="900" fetchpriority="high" decoding="async"></div></div>
     </section>
 
     <section class="wrap schedule-section" aria-labelledby="schedule-heading">
       <div class="section-heading"><h2 id="schedule-heading">OUR JUICES</h2><span>One delicious fruit blend each weekday</span></div>
       <div class="fruit-row">
-        <article class="fruit"><img src="{{ url_for('static', filename='fruit/mosambi.svg') }}" alt="Sweet lime" width="150" height="125"><small>MONDAY</small><strong>Mosambi</strong></article>
-        <article class="fruit"><img src="{{ url_for('static', filename='fruit/pineapple.svg') }}" alt="Pineapple" width="150" height="125"><small>TUESDAY</small><strong>Pineapple</strong></article>
-        <article class="fruit"><img src="{{ url_for('static', filename='fruit/abc.svg') }}" alt="Apple, beetroot and carrot" width="150" height="125"><small>WEDNESDAY</small><strong>ABC</strong><span>Apple · Beetroot · Carrot</span></article>
-        <article class="fruit"><img src="{{ url_for('static', filename='fruit/orange.svg') }}" alt="Orange" width="150" height="125"><small>THURSDAY</small><strong>Orange</strong></article>
-        <article class="fruit"><img src="{{ url_for('static', filename='fruit/watermelon.svg') }}" alt="Watermelon" width="150" height="125"><small>FRIDAY</small><strong>Watermelon</strong></article>
+        <article class="fruit"><img src="{{ url_for('static', filename='fruit/mosambi.webp', v='visual-2') }}" alt="Sweet lime" width="150" height="125" loading="lazy" decoding="async"><small>MONDAY</small><strong>Mosambi</strong></article>
+        <article class="fruit"><img src="{{ url_for('static', filename='fruit/pineapple.webp', v='visual-2') }}" alt="Pineapple" width="150" height="125" loading="lazy" decoding="async"><small>TUESDAY</small><strong>Pineapple</strong></article>
+        <article class="fruit"><img src="{{ url_for('static', filename='fruit/abc.webp', v='visual-2') }}" alt="Apple, beetroot and carrot" width="150" height="125" loading="lazy" decoding="async"><small>WEDNESDAY</small><strong>ABC</strong><span>Apple · Beetroot · Carrot</span></article>
+        <article class="fruit"><img src="{{ url_for('static', filename='fruit/orange.webp', v='visual-2') }}" alt="Orange" width="150" height="125" loading="lazy" decoding="async"><small>THURSDAY</small><strong>Orange</strong></article>
+        <article class="fruit"><img src="{{ url_for('static', filename='fruit/watermelon.webp', v='visual-2') }}" alt="Watermelon" width="150" height="125" loading="lazy" decoding="async"><small>FRIDAY</small><strong>Watermelon</strong></article>
       </div>
     </section>
 
