@@ -56,3 +56,19 @@ h1{font:700 clamp(48px,6vw,80px)/1.02 Georgia,'Times New Roman',serif;letter-spa
 @media(max-width:360px){.fruit strong{font-size:11px}.plan-card strong{font-size:21px}.slot-card small{font-size:9px}.top-promise{font-size:8px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.button{transition:none}}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+/* PureFruit flyer image placement, Nov 2026: presentation only. */
+.brand-logo{font-size:0;letter-spacing:0;line-height:1;display:inline-flex;align-items:center;min-width:0}
+.brand-logo img{display:block;width:251px;max-width:100%;height:auto;max-height:103px;object-fit:contain;object-position:left center}
+.hero-art{height:324px;background:radial-gradient(ellipse at center,#f1f1ed 0%,#f8f8f6 62%,transparent 74%)}
+.hero-juice{width:270px;height:312px}
+.hero-juice img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 12px 14px rgba(0,0,0,.08))}
+.fruit img{object-fit:contain;filter:none}
+@media (max-width:620px){
+  .brand-logo img{width:176px;max-height:75px}
+  .hero-art{height:252px;margin-top:12px}
+  .hero-juice{width:212px;height:240px}
+  .hero-juice img{width:100%;height:100%}
+  .fruit img{height:74px}
+}
+@media (max-width:360px){.brand-logo img{width:157px}.hero-art{height:237px}.hero-juice{height:226px;width:205px}}
