@@ -1,4 +1,4 @@
-"""PureFruit: a minimal WhatsApp-first ordering site with a private SQLite staff report."""
+"""PureFruit: direct online payments and staff order management on Railway."""
 
 import csv
 import hmac
@@ -9,7 +9,8 @@ import secrets
 import sqlite3
 from datetime import date, datetime, timedelta
 from functools import wraps
-from urllib.parse import quote
+
+import requests
 from zoneinfo import ZoneInfo
 
 from flask import (
@@ -29,13 +30,16 @@ app.config.update(
 IST = ZoneInfo("Asia/Kolkata")
 DATABASE = os.getenv("DATABASE_PATH", os.path.join(os.path.dirname(__file__), "orders.db"))
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
-WHATSAPP_NUMBER = "918074062979"
+RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID", "").strip()
+RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", "").strip()
+RAZORPAY_WEBHOOK_SECRET = os.getenv("RAZORPAY_WEBHOOK_SECRET", "").strip()
+RAZORPAY_API = "https://api.razorpay.com/v1"
+PAYMENTS_READY = bool(RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET and RAZORPAY_WEBHOOK_SECRET)
 LAUNCH_DATE = date(2026, 11, 6)
 PLANS = {5: 599, 10: 1099, 20: 1999}
 SLOTS = {"morning": "Morning (8–9 AM)", "afternoon": "Afternoon (4–5 PM)"}
 FRUITS = {0: "Mosambi", 1: "Pineapple", 2: "ABC", 3: "Orange", 4: "Watermelon"}
-STATUSES = ("whatsapp_opened", "confirmed", "completed", "cancelled")
-PAYMENT_STATUSES = ("unpaid", "paid")
+STATUSES = ("payment_pending", "confirmed", "completed", "cancelled", "whatsapp_opened")
 
 
 def now_ist():
@@ -63,12 +67,19 @@ def setup_db():
             price INTEGER NOT NULL,
             delivery_slot TEXT NOT NULL,
             start_date TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'whatsapp_opened',
+            status TEXT NOT NULL DEFAULT 'payment_pending',
             payment_status TEXT NOT NULL DEFAULT 'unpaid',
             notes TEXT NOT NULL DEFAULT '',
             updated_at TEXT NOT NULL
         )""")
+        # Add columns in place; retain existing orders from the WhatsApp-era website.
+        cols = {col[1] for col in con.execute("PRAGMA table_info(orders)")}
+        for name in ("razorpay_order_id", "razorpay_payment_id", "paid_at"):
+            if name not in cols:
+                con.execute(f"ALTER TABLE orders ADD COLUMN {name} TEXT")
         con.execute("CREATE INDEX IF NOT EXISTS orders_start_date_idx ON orders(start_date)")
+        con.execute("CREATE UNIQUE INDEX IF NOT EXISTS orders_razorpay_order_idx ON orders(razorpay_order_id)")
+        con.execute("CREATE UNIQUE INDEX IF NOT EXISTS orders_razorpay_payment_idx ON orders(razorpay_payment_id)")
 
 
 def csrf_token():
@@ -113,21 +124,55 @@ def clean_text(value, max_len):
     return " ".join(str(value or "").split())[:max_len]
 
 
-def wa_link(order):
-    start = date.fromisoformat(order["start_date"]).strftime("%d %b %Y")
-    message = (
-        "Hello PureFruit! I would like to request a juice subscription.\n\n"
-        f"Reference: {order['order_ref']}\n"
-        f"Plan: {order['plan_days']} delivery days – ₹{order['price']:,}\n"
-        f"Delivery: {SLOTS[order['delivery_slot']]}\n"
-        f"Starting: {start}\n"
-        f"Name: {order['name']}\n"
-        f"Tower: {order['tower']}\n"
-        f"Flat: {order['flat']}\n"
-        f"Phone: {order['phone']}\n\n"
-        "Please confirm availability and payment instructions."
+def razorpay_api(method, path, **kwargs):
+    """Only server-side code has the Razorpay API secret."""
+    try:
+        response = requests.request(
+            method, RAZORPAY_API + path, auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET),
+            timeout=(5, 12), **kwargs
+        )
+        response.raise_for_status()
+        return response.json()
+    except (requests.RequestException, ValueError):
+        app.logger.exception("Razorpay API request failed at %s", path)
+        raise RuntimeError("Payment provider unavailable. Please try again shortly.")
+
+
+def payment_matches(order, payment):
+    """Never trust a browser amount/order ID. Check provider entity against SQLite."""
+    return (
+        payment.get("id") and
+        payment.get("order_id") == order["razorpay_order_id"] and
+        payment.get("amount") == order["price"] * 100 and
+        payment.get("currency") == "INR" and
+        payment.get("status") == "captured"
     )
-    return f"https://wa.me/{WHATSAPP_NUMBER}?text={quote(message)}"
+
+
+def mark_paid(order, payment_id):
+    """Idempotent; no duplicate confirmations on webhook retry."""
+    if not payment_id:
+        return False
+    timestamp = now_ist().isoformat(timespec="seconds")
+    with get_db() as con:
+        cur = con.execute(
+            """UPDATE orders SET payment_status='paid',
+                   status=CASE WHEN status='payment_pending' THEN 'confirmed' ELSE status END,
+                   razorpay_payment_id=COALESCE(razorpay_payment_id, ?),
+                   paid_at=COALESCE(paid_at, ?), updated_at=?
+               WHERE order_ref=? AND (razorpay_payment_id IS NULL OR razorpay_payment_id=?)""",
+            (payment_id, timestamp, timestamp, order["order_ref"], payment_id)
+        )
+    return cur.rowcount == 1
+
+
+def find_order(ref=None, razorpay_order_id=None):
+    with get_db() as con:
+        if ref:
+            row = con.execute("SELECT * FROM orders WHERE order_ref=?", (ref,)).fetchone()
+        else:
+            row = con.execute("SELECT * FROM orders WHERE razorpay_order_id=?", (razorpay_order_id,)).fetchone()
+    return dict(row) if row else None
 
 
 @app.after_request
@@ -143,7 +188,7 @@ def security_headers(response):
 def index():
     return render_template(
         "index.html", csrf=csrf_token(), min_start=next_available_day().isoformat(),
-        phone=WHATSAPP_NUMBER,
+        razorpay_ready=PAYMENTS_READY, razorpay_key_id=RAZORPAY_KEY_ID,
     )
 
 
@@ -175,18 +220,97 @@ def create_order():
     if len(phone) != 10 or phone[0] not in "6789":
         return jsonify(error="Enter a valid 10-digit Indian mobile number."), 400
 
-    ref = "PF-" + now_ist().strftime("%y%m%d") + "-" + secrets.token_hex(3).upper()
+    if not PAYMENTS_READY:
+        return jsonify(error="Online payment is not yet enabled. Please contact PureFruit."), 503
+    ref = "PF-" + now_ist().strftime("%y%m%d") + "-" + secrets.token_hex(6).upper()
     timestamp = now_ist().isoformat(timespec="seconds")
     order = dict(order_ref=ref, created_at=timestamp, name=name, phone=phone,
                  tower=tower, flat=flat, plan_days=days, price=PLANS[days],
                  delivery_slot=slot, start_date=start.isoformat(),
-                 status="whatsapp_opened", payment_status="unpaid", updated_at=timestamp)
+                 status="payment_pending", payment_status="unpaid", updated_at=timestamp)
+    try:
+        rp = razorpay_api("POST", "/orders", json={
+            "amount": PLANS[days] * 100, "currency": "INR", "receipt": ref,
+            "notes": {"subscription_days": str(days)}
+        })
+    except RuntimeError as exc:
+        return jsonify(error=str(exc)), 502
+    rzp_order_id = rp.get("id")
+    if (not isinstance(rzp_order_id, str) or not rzp_order_id.startswith("order_") or
+            rp.get("amount") != PLANS[days]*100 or rp.get("currency") != "INR"):
+        app.logger.error("Unexpected Razorpay order API response")
+        return jsonify(error="Could not start payment. Please try again."), 502
+    order["razorpay_order_id"] = rzp_order_id
     with get_db() as con:
         con.execute("""INSERT INTO orders (order_ref,created_at,name,phone,tower,flat,
-            plan_days,price,delivery_slot,start_date,status,payment_status,updated_at)
+            plan_days,price,delivery_slot,start_date,status,payment_status,updated_at,razorpay_order_id)
             VALUES (:order_ref,:created_at,:name,:phone,:tower,:flat,:plan_days,:price,
-            :delivery_slot,:start_date,:status,:payment_status,:updated_at)""", order)
-    return jsonify(reference=ref, whatsapp_url=wa_link(order))
+            :delivery_slot,:start_date,:status,:payment_status,:updated_at,:razorpay_order_id)""", order)
+    return jsonify(reference=ref, razorpay_order_id=rzp_order_id,
+                   key_id=RAZORPAY_KEY_ID, amount=PLANS[days]*100,
+                   currency="INR", name=name, phone=phone)
+
+
+@app.post("/api/orders/<order_ref>/verify")
+def verify_checkout(order_ref):
+    require_csrf()
+    values = request.get_json(silent=True) or {}
+    rp_order_id = str(values.get("razorpay_order_id", ""))
+    payment_id = str(values.get("razorpay_payment_id", ""))
+    signature = str(values.get("razorpay_signature", ""))
+    order = find_order(ref=order_ref)
+    if not (order and order.get("razorpay_order_id") == rp_order_id and
+            payment_id.startswith("pay_") and len(signature) == 64):
+        return jsonify(error="Invalid payment reference."), 400
+    expected = hmac.new(RAZORPAY_KEY_SECRET.encode(),
+                        f"{order['razorpay_order_id']}|{payment_id}".encode(), "sha256").hexdigest()
+    if not hmac.compare_digest(expected, signature):
+        return jsonify(error="Payment verification failed."), 403
+    try:
+        payment = razorpay_api("GET", "/payments/" + payment_id)
+    except RuntimeError:
+        # The webhook may still confirm later; never treat a timeout as success.
+        return jsonify(reference=order_ref, status="pending"), 202
+    if payment_matches(order, payment):
+        if not mark_paid(order, payment_id):
+            return jsonify(error="Payment requires staff review."), 409
+        return jsonify(reference=order_ref, status="paid")
+    # 'authorized' is not captured, so the subscription is NOT confirmed yet.
+    return jsonify(reference=order_ref, status="pending"), 202
+
+
+@app.get("/api/orders/<order_ref>/status")
+def order_payment_status(order_ref):
+    order = find_order(ref=order_ref)
+    if not order or not order.get("razorpay_order_id"):
+        abort(404)
+    return jsonify(reference=order_ref, status=order["payment_status"])
+
+
+@app.post("/api/razorpay/webhook")
+def razorpay_webhook():
+    if not RAZORPAY_WEBHOOK_SECRET:
+        return "Not configured", 503
+    raw = request.get_data(cache=False)
+    supplied = request.headers.get("X-Razorpay-Signature", "")
+    expected = hmac.new(RAZORPAY_WEBHOOK_SECRET.encode(), raw, "sha256").hexdigest()
+    if not hmac.compare_digest(supplied, expected):
+        return "Invalid signature", 403
+    try:
+        import json
+        event = json.loads(raw)
+    except (ValueError, TypeError):
+        return "Invalid JSON", 400
+    if not isinstance(event, dict):
+        return "Invalid event", 400
+    if event.get("event") == "payment.captured":
+        payment = (event.get("payload", {}).get("payment", {}) or {}).get("entity", {})
+        if not isinstance(payment, dict):
+            return "Invalid payment", 400
+        order = find_order(razorpay_order_id=payment.get("order_id")) if payment.get("order_id") else None
+        if order and payment_matches(order, payment):
+            mark_paid(order, payment.get("id"))
+    return "OK", 200
 
 
 @app.route("/staff/login", methods=["GET", "POST"])
@@ -238,15 +362,15 @@ def staff_dashboard():
     stats_orders = all_orders()
     stats = {
         "requests": len(stats_orders),
-        "confirmed": sum(r["status"] == "confirmed" for r in stats_orders),
+        "confirmed": sum(r["status"] in ("confirmed", "completed") for r in stats_orders),
         "paid": sum(r["payment_status"] == "paid" for r in stats_orders),
-        "booked_value": sum(r["price"] for r in stats_orders if r["status"] in ("confirmed", "completed")),
+        "booked_value": sum(r["price"] for r in stats_orders if r["payment_status"] == "paid"),
     }
     selected_date = safe_date(request.args.get("delivery_date"))
     delivery_orders = []
     if selected_date.weekday() < 5:
         for r in stats_orders:
-            if r["status"] in ("confirmed", "completed") and selected_date in dates_in_plan(date.fromisoformat(r["start_date"]), r["plan_days"]):
+            if r["payment_status"] == "paid" and r["status"] in ("confirmed", "completed") and selected_date in dates_in_plan(date.fromisoformat(r["start_date"]), r["plan_days"]):
                 delivery_orders.append(r)
     delivery_orders.sort(key=lambda r: (r["delivery_slot"], r["tower"].lower(), r["flat"].lower()))
     return render_template("admin.html", csrf=csrf_token(), orders=orders[:300],
@@ -260,14 +384,19 @@ def staff_dashboard():
 def update_order(order_ref):
     require_csrf()
     status = request.form.get("status", "")
-    payment = request.form.get("payment_status", "")
     notes = clean_text(request.form.get("notes"), 500)
-    if status not in STATUSES or payment not in PAYMENT_STATUSES:
+    if status not in STATUSES:
         abort(400)
+    current = find_order(ref=order_ref)
+    if not current:
+        abort(404)
+    if current["payment_status"] != "paid" and status in ("confirmed", "completed"):
+        flash("Unpaid orders cannot be confirmed. Await verified Razorpay payment.", "error")
+        return redirect(url_for("staff_dashboard"))
     with get_db() as con:
-        cursor = con.execute("""UPDATE orders SET status=?, payment_status=?, notes=?, updated_at=?
+        cursor = con.execute("""UPDATE orders SET status=?, notes=?, updated_at=?
                                 WHERE order_ref=?""",
-                             (status, payment, notes, now_ist().isoformat(timespec="seconds"), order_ref))
+                             (status, notes, now_ist().isoformat(timespec="seconds"), order_ref))
         if not cursor.rowcount:
             abort(404)
     flash(f"Updated {order_ref}.", "success")
@@ -298,7 +427,10 @@ def export_orders():
             ("name", "Name"), ("phone", "Phone"), ("tower", "Tower"),
             ("flat", "Flat"), ("plan_days", "Delivery days"), ("price", "Price INR"),
             ("delivery_slot", "Slot"), ("start_date", "Start date"),
-            ("status", "Order status"), ("payment_status", "Payment"), ("notes", "Notes")]
+            ("status", "Order status"), ("payment_status", "Payment"),
+            ("razorpay_order_id", "Razorpay order ID"),
+            ("razorpay_payment_id", "Razorpay payment ID"),
+            ("paid_at", "Paid at IST"), ("notes", "Notes")]
     return csv_response(all_orders(), "purefruit-orders.csv", cols)
 
 
@@ -306,7 +438,7 @@ def export_orders():
 @staff_only
 def export_deliveries():
     target = safe_date(request.args.get("delivery_date"))
-    rows = [dict(r) for r in all_orders() if r["status"] in ("confirmed", "completed") and
+    rows = [dict(r) for r in all_orders() if r["payment_status"] == "paid" and r["status"] in ("confirmed", "completed") and
             target.weekday() < 5 and target in dates_in_plan(date.fromisoformat(r["start_date"]), r["plan_days"])]
     rows.sort(key=lambda r: (r["delivery_slot"], r["tower"], r["flat"]))
     for r in rows:

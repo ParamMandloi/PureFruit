@@ -1,65 +1,76 @@
-**Railway Hobby hosting instructions:** see [RAILWAY_SETUP.md](RAILWAY_SETUP.md). The service binds `0.0.0.0:$PORT` using `sh start.sh`.
+# PureFruit — Website Checkout + Private Staff Report
 
-# PureFruit — WhatsApp-first ordering website
+Mobile-first subscription ordering for **www.purefruit.in**, using **Razorpay Standard Checkout**, **Flask**, **SQLite on Railway's mounted `/data` volume**, and a password-protected **/staff** page.
 
-A simple, phone-friendly PureFruit website based on the existing grey / white / black flyer (color only in fruit illustrations). Includes a **private staff order report**. No WhatsApp API, payment gateway or subscription software is required.
+**The customer pays on the website. WhatsApp is only a help link.** Subscription is confirmed only after the server receives a verified, *captured* Razorpay payment. Staff cannot mark an unpaid order as paid by changing a dropdown. The backend keeps legacy records created by the previous WhatsApp version.
 
-## What it does
+## Customer journey
 
-- Shows fixed Monday–Friday menu: Mosambi, Pineapple, ABC, Orange and Watermelon.
-- Lets customers choose 5 days (₹599), 10 days (₹1,099), or 20 days (₹1,999).
-- Lets customers choose one fixed daily slot (8–9 AM or 4–5 PM), a weekday start date, and their L&T Serene County flat.
-- Saves an **order request** into the SQLite database before redirecting the customer to a prefilled WhatsApp message for **+91 80740 62979**.
-- Provides a password-protected **`/staff`** dashboard with order and payment status updates, statistics, daily delivery lists and CSV downloads.
-- The daily list automatically counts delivery days on Monday–Friday only, starting from the customer's selected date. Staff must first change the request status to *Confirmed*.
+1. Select 5 days (₹599), 10 days (₹1,099) or 20 days (₹1,999), one fixed weekday delivery slot (8–9 AM or 4–5 PM), a start date and name/phone/tower/flat.
+2. Server creates Razorpay order for the **server-owned** plan price (in paise) and saves a `payment_pending` row in SQLite. No amount from the browser is trusted.
+3. Customer pays through official Razorpay Checkout.
+4. Browser sends Razorpay's signed checkout result to the server. The server validates the HMAC signature, fetches the payment from Razorpay and checks its **captured** status, expected amount, currency and Razorpay order ID.
+5. Razorpay's signed `payment.captured` webhook can mark it paid even if the customer closes the browser. Webhooks are idempotent.
+6. The staff report shows verified paid orders, transaction IDs and delivery lists, and exports CSV.
 
-## Important limitations
+### Limitations to handle before taking live money
 
-**Clicking to WhatsApp does not prove a message was sent.** The dashboard records customer requests / handoffs. A team member must check WhatsApp, confirm the order, collect payment separately and mark the order *Confirmed* and *Paid* in `/staff`. The website does not read WhatsApp messages or confirm payment automatically.
+- **Auto-capture must be enabled in the Razorpay dashboard**. An `authorized` payment is **not** a completed subscription.
+- These are **prepaid packages**, not automatic recurring deductions. Renewal and refund workflow are not automated.
+- Confirm delivery eligibility, capacity, holidays, cancellation/refund rules, customer support and mandatory business/policy pages for Razorpay approval before accepting live orders.
+- An uncaptured/pending payment is not a confirmed order. If a payment was debited but not captured, check the Razorpay dashboard rather than asking the customer to pay twice.
+- Keep a reliable **offsite database backup**, HTTPS and a single Railway replica when using SQLite. Restrict staff password access; implement more robust login protection/rate limiting for wider launch.
+- The database schema is migrated in place; existing rows are not deleted. Back up `/data/orders.db` before upgrading.
+- This package is a ready-to-deploy implementation, **not** a completed live end-to-end payment test. Configure Razorpay and test simulated payments first.
 
-The first available delivery is November 6, 2026. No weekend deliveries. This starter app does not handle public holidays or skipped deliveries; adjust dates manually if needed. The start date is a requested start date, not a confirmed delivery commitment.
+## Railway configuration
 
-## Run locally
+Set these 7 variables **in Railway**, not in GitHub:
 
-Requires Python 3.10+.
-
-```bash
-cd purefruit-website
-python3 -m venv .venv
-source .venv/bin/activate     # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env          # Windows: copy .env.example .env
+```env
+ADMIN_PASSWORD=<existing strong staff password>
+SECRET_KEY=<existing private session secret>
+HTTPS_ONLY=1
+DATABASE_PATH=/data/orders.db
+RAZORPAY_KEY_ID=rzp_test_...
+RAZORPAY_KEY_SECRET=<test API key secret>
+RAZORPAY_WEBHOOK_SECRET=<new separate webhook secret>
 ```
 
-Edit `.env`. Set **ADMIN_PASSWORD** to a long, unique password and **SECRET_KEY** to a random string. The provided `start.sh` reads `.env` automatically:
+The **three Razorpay values** must be provided before activating this version; until then the Pay button is disabled. Do not share secrets in ChatGPT or include them in screenshots. Keep existing ADMIN_PASSWORD, SECRET_KEY and database volume settings unchanged.
 
-```bash
-./start.sh
-```
+**Razorpay → Account & Settings → Webhooks** (in **Test** mode):
+- **Webhook URL:** `https://www.purefruit.in/api/razorpay/webhook`
+- **Event:** `payment.captured`
+- **Secret:** create a long random value and put the exact same value in Railway's `RAZORPAY_WEBHOOK_SECRET`.
 
-Visit **http://127.0.0.1:5000** for the ordering page and **http://127.0.0.1:5000/staff** for the staff report. Windows users can set environment variables and run `python app.py`.
+If you configure webhook from the Railway URL instead, use `https://purefruit-production.up.railway.app/api/razorpay/webhook` consistently. Do not put credentials in the webhook URL.
 
-**For a quick layout preview without installing anything:** open `PureFruit-preview.html` in your browser. Preview mode goes to WhatsApp but **cannot save order requests** to the report.
+## Updating the existing GitHub repository
 
-## Deploy to purefruit.in
+1. Back up the Railway SQLite volume first. Keep the current live deployment working until you have Test credentials and webhook configured.
+2. Unzip the package and upload its **contents** into the **root of your existing `purefruit-site` GitHub repo**, replacing matching old files. Do not create a second repository or upload the ZIP as-is.
+3. Ensure `app.py`, `requirements.txt`, `start.sh`, `static/` and `templates/` exist at the repository root.
+4. Railway deploys new commits from GitHub. Keep Custom Start Command `sh start.sh`; keep `/data` volume and existing `www.purefruit.in` custom domain.
+5. Run test transactions on the website with Razorpay **Test** keys. Check successful, failed, cancelled, delayed/webhook and duplicate events. Compare `/staff` and Razorpay Dashboard. Only paid orders must appear in delivery CSV.
+6. After Razorpay account activation, generate **Live** keys, configure a **Live** webhook with a new secret, replace all three Railway payment variables with Live values and redeploy. Run a small live payment and reconcile settlement before advertising checkout.
 
-This is a Python/Flask web application and needs a Python-compatible host **with persistent storage** (for its SQLite database), or a server you control. A static-only host will display the page but cannot run the order report.
+**Important:** Test and Live credentials/webhooks are separate. `RAZORPAY_KEY_SECRET` and `RAZORPAY_WEBHOOK_SECRET` are two different secrets.
 
-Recommended production setup:
+## Technical routes
 
-1. Host it on a server with HTTPS and a **persistent** directory, e.g. `/var/lib/purefruit`.
-2. Set environment variables `ADMIN_PASSWORD`, `SECRET_KEY`, `HTTPS_ONLY=1`, and `DATABASE_PATH=/var/lib/purefruit/orders.db`. Do **not** commit `.env` or `orders.db`.
-3. Run it with `waitress-serve --host=127.0.0.1 --port=5000 app:app` behind a reverse proxy such as nginx/Caddy, which terminates HTTPS.
-4. Point your domain `purefruit.in` to your hosting provider using its DNS setup instructions.
-5. Protect and regularly back up the database. It contains customer names, numbers, tower and flat numbers; limit staff access to the password and follow applicable privacy/data protection obligations.
+- `/`: order form
+- `/api/orders` POST: create Razorpay order + local pending order
+- `/api/orders/<reference>/verify` POST: confirm via signed Razorpay result + server fetch
+- `/api/orders/<reference>/status` GET: read paid/pending status (no customer details)
+- `/api/razorpay/webhook` POST: signature-verified `payment.captured` handling
+- `/staff`: private report, order statuses, paid values and CSV exports
 
-For hosting that uses ephemeral file storage, configure a persistent disk / managed database first. Otherwise orders will disappear after a redeploy. Use TLS/HTTPS when live.
+Plans and fruit schedule are in `app.py`, `templates/index.html` and `static/app.js`. Monday–Friday menu: Mosambi, Pineapple, ABC, Orange, Watermelon. 300 ml bottles. No custom schedule.
 
-## Brand and commercial settings
+**Security:** API key secret is server-only; Key ID is publicly visible by design. Verify all bank/payment changes in Razorpay Dashboard. Never store customer card details.
 
-- WhatsApp number: `WHATSAPP_NUMBER` in `app.py` and the support link in `templates/index.html`.
-- Plans: `PLANS` in `app.py` and plan cards in `templates/index.html` / `static/app.js`.
-- Menu: fruit names and images in `templates/index.html`, daily fruit lookup in `app.py`.
-- Location, fixed slots, and other text: `templates/index.html`.
-
-**Security note:** public form uses a per-session CSRF token and bot honeypot; the staff interface uses password login and CSRF checks. Before internet-scale deployment, add rate limiting, monitoring, and stronger staff authentication if needed.
+Official docs:
+- https://razorpay.com/docs/payments/payment-gateway/web-integration/standard/integration-steps/
+- https://razorpay.com/docs/webhooks/
+- https://razorpay.com/docs/server-integration/python/test-app/
