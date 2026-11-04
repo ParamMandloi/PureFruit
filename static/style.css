@@ -72,3 +72,30 @@ h1{font:700 clamp(48px,6vw,80px)/1.02 Georgia,'Times New Roman',serif;letter-spa
   .fruit img{height:74px}
 }
 @media (max-width:360px){.brand-logo img{width:157px}.hero-art{height:237px}.hero-juice{height:226px;width:205px}}
+.hero-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-bottle {
+  width: 100%;
+  max-width: 260px;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .hero-bottle {
+    max-width: 240px;
+  }
+}
+
+@media (max-width: 767px) {
+  .hero-bottle {
+    max-width: 180px;
+    margin-top: 12px;
+  }
+}
