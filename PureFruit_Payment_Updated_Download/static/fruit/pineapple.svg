@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 150" role="img" aria-label="Pineapple">
+<defs><linearGradient id="a" x1="0" x2="1"><stop stop-color="#f5b523"/><stop offset=".5" stop-color="#f5d44f"/><stop offset="1" stop-color="#da9b1f"/></linearGradient></defs>
+<ellipse cx="90" cy="137" rx="55" ry="6" fill="#aaa" opacity=".16"/>
+<path d="M92 55L62 16Q87 22 91 42L83 3Q108 17 102 44L117 12Q123 35 106 49L138 24Q129 49 108 58Z" fill="#378337"/><path d="M88 48L51 36Q70 59 93 59" fill="#479a33"/>
+<path d="M90 47C58 47 44 72 52 105C59 132 75 138 93 135C120 137 129 110 129 87C129 62 115 47 90 47Z" fill="url(#a)" stroke="#d7a125" stroke-width="1.5"/>
+<g stroke="#b1781f" stroke-width="2" opacity=".6"><path d="M55 71L108 130M50 90L89 136M64 55L129 108M91 48L130 83M126 64L62 124M113 52L53 103M91 48L50 84"/></g>
+<g fill="#f7f2a2" opacity=".8"><circle cx="72" cy="75" r="2"/><circle cx="95" cy="67" r="2"/><circle cx="110" cy="89" r="2"/><circle cx="76" cy="111" r="2"/><circle cx="98" cy="115" r="2"/></g>
+</svg>

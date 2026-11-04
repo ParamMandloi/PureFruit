@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f7f5">
+  <meta name="description" content="PureFruit: naturally fresh 300 ml juice delivered at L&T Serene County. Order and pay online for a fixed weekday subscription.">
+  <meta name="csrf-token" content="{{ csrf }}">
+  <title>PureFruit · Naturally Fresh</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body data-preview="false" data-payments-ready="{{ 'true' if razorpay_ready else 'false' }}">
+  <header class="topbar wrap">
+    <a href="#top" class="brand" aria-label="PureFruit home">PureFruit<span class="brand-leaf" aria-hidden="true"><svg viewBox="0 0 30 30"><path d="M5 23Q6 7 26 4Q26 21 9 24" fill="#69A357"/><path d="M6 25Q14 15 24 8" fill="none" stroke="#fff" stroke-width="1.6"/></svg></span></a>
+    <span class="top-promise">HEALTHIER<br>HAPPIER YOU</span>
+  </header>
+
+  <main id="top">
+    <section class="hero wrap">
+      <div class="hero-copy">
+        <div class="eyebrow">NATURALLY FRESH. &nbsp; · &nbsp; L&T SERENE COUNTY</div>
+        <h1>Fresh juice.<br><em>Every weekday.</em></h1>
+        <p>Real fruit, freshly prepared and delivered to your doorstep. Simple subscriptions. One fixed daily delivery slot.</p>
+        <div class="hero-actions">
+          <a class="button button-dark" href="#order">Choose a plan <span aria-hidden="true">↗</span></a>
+          <span class="hero-small">300 ml per bottle<br>Monday – Friday</span>
+        </div>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="hero-juice"><img src="{{ url_for('static', filename='fruit/mosambi.svg') }}" alt="" width="220" height="185"></div>
+        <div class="hero-art-word">100% real fruit</div>
+      </div>
+    </section>
+
+    <section class="wrap schedule-section" aria-labelledby="schedule-heading">
+      <div class="section-heading"><h2 id="schedule-heading">OUR JUICES</h2><span>One delicious fruit blend each weekday</span></div>
+      <div class="fruit-row">
+        <article class="fruit"><img src="{{ url_for('static', filename='fruit/mosambi.svg') }}" alt="Sweet lime" width="150" height="125"><small>MONDAY</small><strong>Mosambi</strong></article>
+        <article class="fruit"><img src="{{ url_for('static', filename='fruit/pineapple.svg') }}" alt="Pineapple" width="150" height="125"><small>TUESDAY</small><strong>Pineapple</strong></article>
+        <article class="fruit"><img src="{{ url_for('static', filename='fruit/abc.svg') }}" alt="Apple, beetroot and carrot" width="150" height="125"><small>WEDNESDAY</small><strong>ABC</strong><span>Apple · Beetroot · Carrot</span></article>
+        <article class="fruit"><img src="{{ url_for('static', filename='fruit/orange.svg') }}" alt="Orange" width="150" height="125"><small>THURSDAY</small><strong>Orange</strong></article>
+        <article class="fruit"><img src="{{ url_for('static', filename='fruit/watermelon.svg') }}" alt="Watermelon" width="150" height="125"><small>FRIDAY</small><strong>Watermelon</strong></article>
+      </div>
+    </section>
+
+    <section class="wrap promise-section" aria-label="Our promise">
+      <div><span class="promise-icon">◯</span><strong>300 ml</strong><small>per bottle</small></div>
+      <div><span class="promise-icon">✳</span><strong>No added</strong><small>sugar, water or ice</small></div>
+      <div><span class="promise-icon">❀</span><strong>Freshly</strong><small>prepared</small></div>
+      <div><span class="promise-icon">◷</span><strong>Enjoy within</strong><small>2 hours</small></div>
+    </section>
+
+    <section class="wrap order-section" id="order" aria-labelledby="order-heading">
+      <div class="section-heading"><h2 id="order-heading">ORDER YOUR SUBSCRIPTION</h2><span>Secure online checkout</span></div>
+      <div class="order-grid">
+        <form id="order-form" class="order-panel" novalidate>
+          <fieldset class="field-group plan-group">
+            <legend><span class="step-number">01</span> Choose your plan</legend>
+            <div class="plan-options">
+              <label class="plan-card is-selected"><input name="plan_days" type="radio" value="5" checked required><span class="plan-title">5 days</span><span class="plan-caption">1 week</span><strong>₹599</strong><span class="choose-mark" aria-hidden="true">✓</span></label>
+              <label class="plan-card"><input name="plan_days" type="radio" value="10"><span class="plan-title">10 days</span><span class="plan-caption">2 weeks</span><strong>₹1,099</strong><span class="choose-mark" aria-hidden="true">✓</span></label>
+              <label class="plan-card"><input name="plan_days" type="radio" value="20"><span class="plan-title">20 days</span><span class="plan-caption">4 weeks</span><strong>₹1,999</strong><span class="choose-mark" aria-hidden="true">✓</span></label>
+            </div>
+          </fieldset>
+
+          <fieldset class="field-group">
+            <legend><span class="step-number">02</span> Delivery timing</legend>
+            <div class="slot-options">
+              <label class="slot-card is-selected"><input type="radio" name="delivery_slot" value="morning" checked required><span class="slot-icon" aria-hidden="true">☼</span><span><strong>Morning</strong><small>8:00 – 9:00 AM</small></span><span class="radio-dot" aria-hidden="true"></span></label>
+              <label class="slot-card"><input type="radio" name="delivery_slot" value="afternoon"><span class="slot-icon" aria-hidden="true">◷</span><span><strong>Afternoon</strong><small>4:00 – 5:00 PM</small></span><span class="radio-dot" aria-hidden="true"></span></label>
+            </div>
+            <p class="hint">Your chosen slot remains the same for the entire subscription.</p>
+          </fieldset>
+
+          <fieldset class="field-group">
+            <legend><span class="step-number">03</span> Your delivery details</legend>
+            <div class="fields">
+              <label class="full">Full name<input type="text" name="name" autocomplete="name" minlength="2" maxlength="70" placeholder="Your name" required></label>
+              <label class="full">Mobile number<input type="tel" name="phone" autocomplete="tel-national" inputmode="numeric" maxlength="14" placeholder="10-digit mobile number" required></label>
+              <label>Tower / block<input type="text" name="tower" maxlength="50" placeholder="e.g. Tower A" required></label>
+              <label>Flat number<input type="text" name="flat" maxlength="30" placeholder="e.g. 1204" required></label>
+              <label class="full">Preferred start date<input type="date" name="start_date" min="{{ min_start }}" value="{{ min_start }}" required></label>
+            </div>
+            <p class="hint">Delivery within L&T Serene County only. Monday to Friday, excluding weekends.</p>
+          </fieldset>
+          <input class="invisible-field" name="website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <div id="form-error" class="form-error" role="alert" hidden></div>
+          <button class="button button-dark button-submit" type="submit" id="submit-order">Pay securely <span aria-hidden="true">↗</span></button>
+          <p class="after-submit">Secure payment powered by Razorpay. Your subscription is confirmed only after successful payment verification. Payment methods depend on your Razorpay account.</p>
+          {% if not razorpay_ready %}<p class="form-error">Online checkout is not yet enabled. Please try later.</p>{% endif %}
+          <div id="form-success" class="form-success" role="status" hidden></div>
+        </form>
+
+        <aside class="summary-panel" aria-label="Order summary">
+          <div class="summary-label">YOUR SUBSCRIPTION</div>
+          <div class="summary-plan" id="summary-plan">5 delivery days</div>
+          <div class="summary-price" id="summary-price">₹599</div>
+          <div class="summary-line"><span>Bottle size</span><strong>300 ml</strong></div>
+          <div class="summary-line"><span>Delivery days</span><strong>Mon – Fri</strong></div>
+          <div class="summary-line"><span>Slot</span><strong id="summary-slot">8 – 9 AM</strong></div>
+          <div class="summary-line"><span>Daily juice</span><strong>Fixed weekly menu</strong></div>
+          <div class="summary-divider"></div>
+          <p><strong>No added sugar. No added water. No ice.</strong><br>Nothing complicated — just fruit and a fresher routine.</p>
+          <div class="summary-support">NEED HELP? <a href="https://wa.me/918074062979" rel="noopener noreferrer">WhatsApp 8074062979</a></div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer"><div class="wrap footer-inner"><div><strong class="footer-brand">PureFruit</strong><span>Naturally Fresh.</span></div><div>Real fruit. Real people. A healthier tomorrow.</div><div>© PureFruit · <a href="https://www.purefruit.in">purefruit.in</a></div></div></footer>
+  <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</body>
+</html>

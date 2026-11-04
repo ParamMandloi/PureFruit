@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>PureFruit · Staff Login</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"></head>
+<body class="staff-body">
+  <main class="login-wrap">
+    <div class="staff-brand">PureFruit<small>PRIVATE STAFF REPORT</small></div>
+    <h1>Staff sign in</h1>
+    <p>This page is only for your PureFruit team.</p>
+    {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="alert">{{ message }}</div>{% endfor %}{% endwith %}
+    <form method="post" action="{{ url_for('staff_login') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <label for="password">Staff password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required autofocus>
+      <button class="button button-dark" type="submit">Open order report →</button>
+    </form>
+    <p><a href="{{ url_for('index') }}">← Back to PureFruit</a></p>
+  </main>
+</body>
+</html>
