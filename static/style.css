@@ -99,3 +99,13 @@ h1{font:700 clamp(48px,6vw,80px)/1.02 Georgia,'Times New Roman',serif;letter-spa
     margin-top: 12px;
   }
 }
+.hero {
+  align-items: center;
+}
+
+.hero-visual {
+  align-self: center;
+}
+.hero-bottle {
+  max-width: 220px;
+}
