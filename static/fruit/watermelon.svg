@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 150" role="img" aria-label="Watermelon">
+<ellipse cx="93" cy="137" rx="58" ry="6" fill="#aaa" opacity=".18"/>
+<path d="M29 109Q93 148 157 109L92 25Z" fill="#2f8e44"/><path d="M35 109Q93 143 151 109L92 32Z" fill="#f8edc1"/>
+<path d="M42 107Q92 137 144 107L92 39Z" fill="#f04f57"/>
+<g fill="#39332a"><path d="M92 70q-9 5 0 15q8-7 0-15Z"/><path d="M70 88q-10 5 0 14q9-7 0-14Z"/><path d="M113 89q-8 4 0 14q9-8 0-14Z"/><path d="M91 110q-9 4 0 12q9-7 0-12Z"/></g>
+</svg>

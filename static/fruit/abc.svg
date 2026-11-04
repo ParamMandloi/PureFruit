@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 150" role="img" aria-label="Apple, beetroot and carrot">
+<defs><radialGradient id="apple" cx="35%" cy="30%"><stop stop-color="#fa766b"/><stop offset="1" stop-color="#c82629"/></radialGradient><radialGradient id="beet"><stop stop-color="#d94e76"/><stop offset="1" stop-color="#842344"/></radialGradient></defs>
+<ellipse cx="90" cy="134" rx="68" ry="6" fill="#aaa" opacity=".17"/>
+<path d="M55 52Q33 40 24 58C11 87 27 123 48 124Q57 122 64 124Q85 128 92 91C95 68 82 49 66 49Q59 47 55 52Z" fill="url(#apple)"/>
+<path d="M56 53Q56 31 63 23" stroke="#674321" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M62 30Q74 14 91 28Q79 41 62 30Z" fill="#56a43e"/>
+<path d="M91 66Q92 44 102 34" stroke="#45933f" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M103 38Q111 15 126 18L111 44Z" fill="#65ad4f"/>
+<path d="M91 63L116 63L103 132Z" fill="#f29b29"/><path d="M91 63Q104 71 116 63" fill="none" stroke="#d57624" stroke-width="3"/>
+<path d="M119 80Q128 70 143 78Q159 92 148 119Q137 139 127 118Q111 91 119 80Z" fill="url(#beet)"/>
+<path d="M132 77Q119 55 133 45" fill="none" stroke="#508a39" stroke-width="5" stroke-linecap="round"/><path d="M133 53Q144 32 153 43Q152 55 135 63Z" fill="#4e9d42"/><path d="M132 57Q114 41 112 49Q112 62 131 64Z" fill="#6fb351"/>
+</svg>

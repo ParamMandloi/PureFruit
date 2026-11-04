@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f7f5">
+  <meta name="description" content="PureFruit: naturally fresh 300 ml juice delivered at L&T Serene County. Order a fixed weekday subscription on WhatsApp.">
+  <meta name="csrf-token" content="preview-only">
+  <title>PureFruit · Naturally Fresh</title>
+  <style>
+:root{--ink:#222;--muted:#707070;--edge:#dededc;--paper:#fafaf8;--pale:#f1f1ef;--dark:#424242;--radius:15px}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{cursor:wait;opacity:.65}
+.wrap{width:min(1120px,calc(100% - 52px));margin-inline:auto}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:25px 0 17px;border-bottom:1px solid #dededa}
+.brand{font:700 clamp(35px,4.2vw,54px)/1 Georgia,'Times New Roman',serif;letter-spacing:-2.8px;position:relative;display:inline-flex;align-items:flex-start}
+.brand-leaf{width:28px;height:28px;transform:translate(-3px,-12px)}.brand-leaf svg{display:block;width:100%;height:100%}
+.top-promise{text-align:right;font-weight:700;letter-spacing:4px;font-size:11px;line-height:1.55;color:#3d3d3d}
+.hero{display:grid;grid-template-columns:1.15fr .85fr;align-items:center;min-height:390px;gap:50px;padding-top:50px;padding-bottom:50px}
+.eyebrow{font-size:10px;font-weight:700;letter-spacing:2px;color:#747474}
+h1{font:700 clamp(48px,6vw,80px)/1.02 Georgia,'Times New Roman',serif;letter-spacing:-3px;margin:24px 0 20px}h1 em{font-weight:400;font-style:normal;color:#777}
+.hero-copy p{font-size:16px;color:#616161;line-height:1.75;max-width:475px;margin:0 0 25px}
+.hero-actions{display:flex;align-items:center;gap:22px;flex-wrap:wrap}.hero-small{font-size:12px;color:#777;line-height:1.4}
+.button{display:inline-flex;align-items:center;justify-content:center;gap:20px;border-radius:9px;min-height:48px;padding:12px 22px;font-weight:700;transition:background-color .16s,transform .16s}
+.button:active{transform:translateY(1px)}.button-dark{background:#3f3f3f;color:#fff;border:1px solid #3f3f3f}.button-dark:hover{background:#292929}
+.hero-art{height:280px;position:relative;display:flex;align-items:center;justify-content:center;border-radius:150px;background:radial-gradient(ellipse at center,#f3f3f0 0%,#f8f8f6 55%,transparent 70%)}
+.hero-juice{width:240px;height:240px;display:grid;place-items:center}.hero-juice img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 10px 12px #00000012)}
+.hero-art-word{position:absolute;bottom:13px;right:20px;color:#9b9b9b;font:italic 18px Georgia,serif}
+.section-heading{display:flex;align-items:center;gap:15px;justify-content:space-between;border-bottom:1px solid #bcbcbc;padding-bottom:11px;margin-bottom:21px}
+.section-heading h2{font-size:12px;letter-spacing:2.7px;background:#606060;color:#fff;border-radius:25px;padding:7px 19px;margin:0;font-weight:700;white-space:nowrap}
+.section-heading>span{font-size:12px;color:#888;text-align:right}
+.schedule-section{padding-top:10px}
+.fruit-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;padding:0 0 38px}
+.fruit{display:flex;flex-direction:column;align-items:center;text-align:center;border-right:1px solid #d7d7d5;padding:7px 8px;min-width:0}
+.fruit:last-child{border:0}.fruit img{height:111px;width:min(150px,100%);object-fit:contain}.fruit small{font-size:10px;letter-spacing:1.1px;color:#888;margin-top:5px}.fruit strong{font:700 20px/1.22 Georgia,serif;margin-top:3px}.fruit span{font-size:9px;color:#777;white-space:nowrap}
+.promise-section{border:1px solid #d9d9d8;border-radius:16px;display:grid;grid-template-columns:repeat(4,1fr);background:#f3f3f1;padding:18px 0;margin-bottom:65px}
+.promise-section>div{border-right:1px solid #cececc;display:flex;align-items:center;flex-direction:column;gap:1px;text-align:center;min-height:93px;justify-content:center}.promise-section>div:last-child{border:0}
+.promise-icon{font-size:23px;color:#686868;height:35px}.promise-section strong{font:700 19px Georgia,serif}.promise-section small{font-size:12px;color:#666}
+.order-section{padding-bottom:80px}.order-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(275px,.75fr);gap:28px;align-items:start}
+.order-panel{padding:33px 33px 30px;background:#fff;border:1px solid #dededc;border-radius:18px;box-shadow:0 8px 35px #00000006}
+.field-group{border:0;margin:0 0 30px;padding:0}.field-group legend{font-weight:700;font-size:16px;margin-bottom:18px;padding:0;display:block;width:100%}
+.step-number{display:inline-grid;place-items:center;width:27px;height:27px;margin-right:6px;border:1px solid #aeaeae;border-radius:50%;color:#777;font-size:10px;vertical-align:middle}
+.plan-options{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}.plan-card{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:2px;border:1.5px solid #ddd;border-radius:12px;padding:17px 12px 15px;cursor:pointer;min-height:134px;background:#fdfdfd;transition:border .15s,background .15s}
+.plan-card:hover,.slot-card:hover{border-color:#888}.plan-card.is-selected,.slot-card.is-selected{border-color:#454545;background:#f4f4f3}
+.plan-card input,.slot-card input{position:absolute;opacity:0;inset:0;width:100%;height:100%;cursor:pointer;margin:0}.plan-card:focus-within,.slot-card:focus-within{outline:2px solid #888;outline-offset:2px}
+.plan-title{font-weight:700;font-size:15px}.plan-caption{font-size:12px;color:#777}.plan-card strong{font:700 27px Georgia,serif;margin-top:auto;letter-spacing:-.7px}.choose-mark{display:none;position:absolute;right:9px;top:9px;font-size:11px;background:#444;color:#fff;width:19px;height:19px;text-align:center;line-height:18px;border-radius:50%}.is-selected .choose-mark{display:block}
+.slot-options{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.slot-card{position:relative;display:flex;align-items:center;gap:11px;border:1.5px solid #ddd;border-radius:12px;padding:13px;cursor:pointer;min-height:77px}.slot-icon{font-size:23px;color:#686868;line-height:1}.slot-card strong{display:block;font-size:14px}.slot-card small{display:block;color:#777;font-size:11px;white-space:nowrap}.radio-dot{margin-left:auto;border:1px solid #aaa;border-radius:50%;width:17px;height:17px;flex:none}.is-selected .radio-dot{border:5px solid #444}
+.hint{font-size:11px;color:#777;margin:10px 0 0}.fields{display:grid;grid-template-columns:1fr 1fr;gap:14px}.fields label{display:flex;flex-direction:column;font-size:12px;gap:7px;font-weight:700;color:#535353}.fields .full{grid-column:1/-1}
+.fields input{background:#fbfbfa;width:100%;border:1px solid #d7d7d5;border-radius:8px;height:47px;padding:10px 13px;font-size:14px;color:#222;outline:0}.fields input:focus{border-color:#555;box-shadow:0 0 0 3px #0000000c}.fields input::placeholder{color:#aaa}
+.invisible-field{position:absolute;left:-9999px}.form-error{background:#f0f0f0;color:#444;padding:10px 14px;border-radius:7px;margin-bottom:12px;font-size:13px}.form-success{padding:14px;background:#f0f0ee;border:1px solid #d6d6d1;border-radius:10px;margin-top:15px;font-size:13px}.form-success a{font-weight:700;text-decoration:underline}
+.button-submit{border-radius:10px;width:100%;min-height:54px;font-size:15px}.after-submit{font-size:11px;color:#777;margin:14px 0 0;line-height:1.65}
+.summary-panel{background:#eee;position:sticky;top:20px;border-radius:18px;padding:31px 29px;border:1px solid #e2e2df}.summary-label{font-size:10px;font-weight:700;letter-spacing:2px;color:#777}.summary-plan{font:27px Georgia,serif;margin-top:15px}.summary-price{font:700 55px Georgia,serif;margin:0 0 28px;letter-spacing:-2px}
+.summary-line{display:flex;justify-content:space-between;gap:18px;border-bottom:1px solid #d1d1ce;padding:12px 0;font-size:12px}.summary-line span{color:#777}.summary-line strong{text-align:right;font-size:12px}.summary-divider{margin-top:25px;border-top:2px solid #777;width:42px}.summary-panel p{font-size:12px;color:#666;line-height:1.85}.summary-panel p strong{color:#444}
+.summary-support{border-top:1px solid #d1d1ce;padding-top:20px;margin-top:22px;font-size:10px;font-weight:700;letter-spacing:.8px;color:#7a7a7a}.summary-support a{display:block;color:#333;font-size:14px;margin-top:5px;letter-spacing:0}
+.footer{background:#383838;color:#eee;padding:25px 0}.footer-inner{display:flex;justify-content:space-between;align-items:center;gap:25px;font-size:11px;color:#ddd}.footer-inner>div:first-child{display:flex;flex-direction:column;line-height:1.3}.footer-brand{font:700 24px Georgia,serif;color:#fff}
+/* Staff pages */
+.staff-body{background:#f6f6f4}.staff-top{background:#fff;border-bottom:1px solid #dedede;padding:14px 0}.staff-top-inner{display:flex;justify-content:space-between;align-items:center;gap:20px}.staff-brand{font:700 30px Georgia,serif;letter-spacing:-1px}.staff-brand small{display:block;font:11px Arial,sans-serif;color:#888;letter-spacing:1px;margin-top:2px}.staff-actions{display:flex;align-items:center;gap:15px}.text-button{border:0;background:none;color:#555;font-size:13px;text-decoration:underline}.staff-main{padding-top:35px;padding-bottom:70px}.staff-main h1{font:700 38px Georgia,serif;letter-spacing:-1px;margin:0 0 4px}.staff-sub{font-size:12px;color:#777;margin:0 0 26px}
+.stat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:30px}.stat{background:#fff;border:1px solid #ddd;border-radius:12px;padding:19px}.stat small{color:#777;display:block;font-size:12px}.stat strong{font:700 33px Georgia,serif;display:block;margin-top:3px}
+.staff-card{background:#fff;border:1px solid #ddd;border-radius:15px;padding:22px;margin-bottom:20px}.staff-heading{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;margin-bottom:18px}.staff-heading h2{font:700 23px Georgia,serif;margin:0}.staff-heading .gray-link{font-size:12px;text-decoration:underline}.staff-filter{display:flex;gap:9px;flex-wrap:wrap}.staff-filter input,.staff-filter select{min-height:38px;border:1px solid #d5d5d5;border-radius:6px;padding:7px 10px;background:#fff;min-width:125px}.small-button{border:1px solid #555;background:#4b4b4b;color:#fff;border-radius:7px;padding:8px 14px;font-weight:700;font-size:12px;min-height:38px}.small-button.secondary{background:#fff;color:#555}.staff-rows{overflow-x:auto}.staff-table{width:100%;border-collapse:collapse;font-size:12px;min-width:720px}.staff-table th{text-align:left;color:#777;font-size:10px;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid #d8d8d8;padding:10px 8px}.staff-table td{padding:12px 8px;border-bottom:1px solid #eee;vertical-align:top}.staff-table td strong{display:block}.muted{color:#777}.tag{font-weight:700;display:inline-block;padding:4px 8px;border-radius:5px;background:#eee;font-size:11px}.tag.positive{background:#dededc;color:#353535}.tag.pending{background:#f0f0ee;color:#676767}
+.staff-edit{display:flex;gap:4px;flex-wrap:wrap;min-width:230px}.staff-edit select,.staff-edit input{border:1px solid #ccc;border-radius:4px;background:#fff;min-height:30px;font-size:11px;padding:4px;max-width:115px}.staff-edit input{max-width:100px}.staff-edit button{font-size:11px;border:0;padding:5px 9px;border-radius:4px;color:#fff;background:#555}.empty{text-align:center;padding:22px;color:#999;font-size:13px}.alert{padding:12px;border:1px solid #ccc;border-radius:7px;margin-bottom:14px;font-size:13px;background:#eee}.staff-legend{font-size:11px;color:#777;margin:10px 0 0}
+.login-wrap{max-width:410px;margin:12vh auto;padding:28px;border:1px solid #ddd;background:#fff;border-radius:16px}.login-wrap h1{font:700 32px Georgia,serif;margin:12px 0}.login-wrap p{font-size:13px;color:#777}.login-wrap label{display:block;font-size:12px;margin-top:22px;font-weight:700}.login-wrap input{width:100%;height:48px;padding:10px;margin-top:8px;border:1px solid #ccc;border-radius:7px}.login-wrap button{width:100%;margin-top:18px}
+@media(max-width:860px){.hero{gap:18px}.order-grid{grid-template-columns:1fr}.summary-panel{position:static;order:-1;padding:22px;display:grid;grid-template-columns:1fr 1fr;gap:0 20px}.summary-label,.summary-plan,.summary-price,.summary-divider,.summary-panel p,.summary-support{grid-column:1/-1}.summary-price{margin-bottom:12px}.summary-panel p{margin-bottom:0}.staff-table{min-width:780px}}
+@media(max-width:620px){.wrap{width:calc(100% - 34px)}.topbar{padding-top:17px;padding-bottom:14px}.brand{font-size:38px;letter-spacing:-2px}.brand-leaf{width:22px;height:22px;transform:translate(-2px,-10px)}.top-promise{letter-spacing:1.6px;font-size:9px}.hero{display:flex;flex-direction:column;gap:0;padding-top:30px;padding-bottom:26px;align-items:stretch;min-height:0}.hero-copy h1{font-size:48px;letter-spacing:-2.5px;margin:19px 0 16px}.hero-copy p{font-size:14px}.hero-art{height:155px;margin-top:2px}.hero-juice{height:180px;width:180px}.hero-art-word{font-size:13px;right:14px;bottom:7px}.hero-actions{gap:15px}.button{min-height:45px}.hero-small{font-size:11px}.section-heading{margin-bottom:12px}.section-heading h2{font-size:10px;padding:6px 12px;letter-spacing:1.6px}.section-heading>span{font-size:10px}.fruit-row{grid-template-columns:repeat(5,minmax(0,1fr));padding-bottom:20px}.fruit{padding:0 2px}.fruit img{height:65px;width:100%}.fruit small{font-size:7px;letter-spacing:.1px}.fruit strong{font-size:12px;margin-top:3px}.fruit span{font-size:7px;white-space:normal;line-height:1.1}.promise-section{margin-bottom:42px;padding:15px 0}.promise-section>div{min-height:90px;padding:0 4px}.promise-section strong{font-size:12px}.promise-section small{font-size:10px;line-height:1.3}.promise-icon{font-size:20px;height:32px}.order-section{padding-bottom:35px}.order-grid{gap:18px}.order-panel{padding:22px 17px}.field-group{margin-bottom:24px}.field-group legend{font-size:15px}.plan-options{gap:7px}.plan-card{padding:14px 9px;min-height:123px}.plan-title{font-size:13px}.plan-caption{font-size:11px}.plan-card strong{font-size:23px}.slot-options{gap:8px}.slot-card{gap:7px;padding:10px 7px;min-height:71px}.slot-icon{font-size:19px}.slot-card strong{font-size:12px}.slot-card small{font-size:10px}.radio-dot{width:13px;height:13px}.is-selected .radio-dot{border-width:4px}.fields{gap:12px}.fields input{height:45px;padding:9px 10px;font-size:13px}.summary-panel{padding:22px 20px}.summary-plan{font-size:23px}.summary-price{font-size:43px}.footer-inner{flex-wrap:wrap;gap:15px}.footer-inner>div:nth-child(2){flex-basis:100%;order:3}.stat-grid{grid-template-columns:repeat(2,1fr)}.staff-main h1{font-size:30px}.staff-card{padding:15px}.staff-heading h2{font-size:20px}.staff-filter input{width:100%}.login-wrap{margin:10vh 17px}}
+@media(max-width:360px){.fruit strong{font-size:11px}.plan-card strong{font-size:21px}.slot-card small{font-size:9px}.top-promise{font-size:8px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.button{transition:none}}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+</style>
+</head>
+<body data-preview="true">
+  <header class="topbar wrap">
+    <a href="#top" class="brand" aria-label="PureFruit home">PureFruit<span class="brand-leaf" aria-hidden="true"><svg viewBox="0 0 30 30"><path d="M5 23Q6 7 26 4Q26 21 9 24" fill="#777"/><path d="M6 25Q14 15 24 8" fill="none" stroke="#fff" stroke-width="1.6"/></svg></span></a>
+    <span class="top-promise">HEALTHIER<br>HAPPIER YOU</span>
+  </header>
+
+  <main id="top">
+    <section class="hero wrap">
+      <div class="hero-copy">
+        <div class="eyebrow">NATURALLY FRESH. &nbsp; · &nbsp; L&T SERENE COUNTY</div>
+        <h1>Fresh juice.<br><em>Every weekday.</em></h1>
+        <p>Real fruit, freshly prepared and delivered to your doorstep. Simple subscriptions. One fixed daily delivery slot.</p>
+        <div class="hero-actions">
+          <a class="button button-dark" href="#order">Choose a plan <span aria-hidden="true">↗</span></a>
+          <span class="hero-small">300 ml per bottle<br>Monday – Friday</span>
+        </div>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="hero-juice"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgMTUwIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IlN3ZWV0IGxpbWUiPgo8ZGVmcz48cmFkaWFsR3JhZGllbnQgaWQ9ImEiIGN4PSIzNCUiIGN5PSIyNiUiPjxzdG9wIHN0b3AtY29sb3I9IiNlYWZjN2QiLz48c3RvcCBvZmZzZXQ9Ii43IiBzdG9wLWNvbG9yPSIjYmVkYzJiIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjODNhOTFmIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9ImIiIGN4PSIzNiUiIGN5PSIzMCUiPjxzdG9wIHN0b3AtY29sb3I9IiNmZmZhYmMiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiNmZmNjMjMiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz4KPGVsbGlwc2UgY3g9Ijk1IiBjeT0iMTM0IiByeD0iNjEiIHJ5PSI3IiBmaWxsPSIjYWFhIiBvcGFjaXR5PSIuMTkiLz4KPHBhdGggZD0iTTkyIDUxUTg3IDIwIDExNCAxMlExMzIgMjQgMTA5IDQ2WiIgZmlsbD0iIzNjOGMzMSIvPjxwYXRoIGQ9Ik04OSA1N1E1NSAzMiAzMyA1M1E0NyA3OCA3OCA3MFoiIGZpbGw9IiM1OGE2NDAiLz4KPGNpcmNsZSBjeD0iNzgiIGN5PSI4NiIgcj0iNDgiIGZpbGw9InVybCgjYSkiLz4KPGNpcmNsZSBjeD0iMTEzIiBjeT0iOTEiIHI9IjQ3IiBmaWxsPSIjZjVlZmI2Ii8+PGNpcmNsZSBjeD0iMTEzIiBjeT0iOTEiIHI9IjQwIiBmaWxsPSJ1cmwoI2IpIi8+CjxnIHN0cm9rZT0iI2ZmZmFlNyIgc3Ryb2tlLXdpZHRoPSIzLjIiPjxwYXRoIGQ9Ik0xMTMgOTFMMTEzIDUxTTExMyA5MUwxNDEgNjRNMTEzIDkxTDE1MiA5MU0xMTMgOTFMMTQxIDExOU0xMTMgOTFMMTEzIDEzME0xMTMgOTFMODUgMTE5TTExMyA5MUw3MyA5MU0xMTMgOTFMODUgNjMiLz48L2c+CjxjaXJjbGUgY3g9IjExMyIgY3k9IjkxIiByPSI1IiBmaWxsPSIjZmZmOGQ5Ii8+PGNpcmNsZSBjeD0iMTEzIiBjeT0iOTEiIHI9IjQwIiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZkZTkiIHN0cm9rZS13aWR0aD0iMyIvPgo8L3N2Zz4K" alt="" width="220" height="185"></div>
+        <div class="hero-art-word">100% real fruit</div>
+      </div>
+    </section>
+
+    <section class="wrap schedule-section" aria-labelledby="schedule-heading">
+      <div class="section-heading"><h2 id="schedule-heading">OUR JUICES</h2><span>One delicious fruit blend each weekday</span></div>
+      <div class="fruit-row">
+        <article class="fruit"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgMTUwIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IlN3ZWV0IGxpbWUiPgo8ZGVmcz48cmFkaWFsR3JhZGllbnQgaWQ9ImEiIGN4PSIzNCUiIGN5PSIyNiUiPjxzdG9wIHN0b3AtY29sb3I9IiNlYWZjN2QiLz48c3RvcCBvZmZzZXQ9Ii43IiBzdG9wLWNvbG9yPSIjYmVkYzJiIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjODNhOTFmIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9ImIiIGN4PSIzNiUiIGN5PSIzMCUiPjxzdG9wIHN0b3AtY29sb3I9IiNmZmZhYmMiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiNmZmNjMjMiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz4KPGVsbGlwc2UgY3g9Ijk1IiBjeT0iMTM0IiByeD0iNjEiIHJ5PSI3IiBmaWxsPSIjYWFhIiBvcGFjaXR5PSIuMTkiLz4KPHBhdGggZD0iTTkyIDUxUTg3IDIwIDExNCAxMlExMzIgMjQgMTA5IDQ2WiIgZmlsbD0iIzNjOGMzMSIvPjxwYXRoIGQ9Ik04OSA1N1E1NSAzMiAzMyA1M1E0NyA3OCA3OCA3MFoiIGZpbGw9IiM1OGE2NDAiLz4KPGNpcmNsZSBjeD0iNzgiIGN5PSI4NiIgcj0iNDgiIGZpbGw9InVybCgjYSkiLz4KPGNpcmNsZSBjeD0iMTEzIiBjeT0iOTEiIHI9IjQ3IiBmaWxsPSIjZjVlZmI2Ii8+PGNpcmNsZSBjeD0iMTEzIiBjeT0iOTEiIHI9IjQwIiBmaWxsPSJ1cmwoI2IpIi8+CjxnIHN0cm9rZT0iI2ZmZmFlNyIgc3Ryb2tlLXdpZHRoPSIzLjIiPjxwYXRoIGQ9Ik0xMTMgOTFMMTEzIDUxTTExMyA5MUwxNDEgNjRNMTEzIDkxTDE1MiA5MU0xMTMgOTFMMTQxIDExOU0xMTMgOTFMMTEzIDEzME0xMTMgOTFMODUgMTE5TTExMyA5MUw3MyA5MU0xMTMgOTFMODUgNjMiLz48L2c+CjxjaXJjbGUgY3g9IjExMyIgY3k9IjkxIiByPSI1IiBmaWxsPSIjZmZmOGQ5Ii8+PGNpcmNsZSBjeD0iMTEzIiBjeT0iOTEiIHI9IjQwIiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZkZTkiIHN0cm9rZS13aWR0aD0iMyIvPgo8L3N2Zz4K" alt="Sweet lime" width="150" height="125"><small>MONDAY</small><strong>Mosambi</strong></article>
+        <article class="fruit"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgMTUwIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IlBpbmVhcHBsZSI+CjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYSIgeDE9IjAiIHgyPSIxIj48c3RvcCBzdG9wLWNvbG9yPSIjZjViNTIzIi8+PHN0b3Agb2Zmc2V0PSIuNSIgc3RvcC1jb2xvcj0iI2Y1ZDQ0ZiIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2RhOWIxZiIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPgo8ZWxsaXBzZSBjeD0iOTAiIGN5PSIxMzciIHJ4PSI1NSIgcnk9IjYiIGZpbGw9IiNhYWEiIG9wYWNpdHk9Ii4xNiIvPgo8cGF0aCBkPSJNOTIgNTVMNjIgMTZRODcgMjIgOTEgNDJMODMgM1ExMDggMTcgMTAyIDQ0TDExNyAxMlExMjMgMzUgMTA2IDQ5TDEzOCAyNFExMjkgNDkgMTA4IDU4WiIgZmlsbD0iIzM3ODMzNyIvPjxwYXRoIGQ9Ik04OCA0OEw1MSAzNlE3MCA1OSA5MyA1OSIgZmlsbD0iIzQ3OWEzMyIvPgo8cGF0aCBkPSJNOTAgNDdDNTggNDcgNDQgNzIgNTIgMTA1QzU5IDEzMiA3NSAxMzggOTMgMTM1QzEyMCAxMzcgMTI5IDExMCAxMjkgODdDMTI5IDYyIDExNSA0NyA5MCA0N1oiIGZpbGw9InVybCgjYSkiIHN0cm9rZT0iI2Q3YTEyNSIgc3Ryb2tlLXdpZHRoPSIxLjUiLz4KPGcgc3Ryb2tlPSIjYjE3ODFmIiBzdHJva2Utd2lkdGg9IjIiIG9wYWNpdHk9Ii42Ij48cGF0aCBkPSJNNTUgNzFMMTA4IDEzME01MCA5MEw4OSAxMzZNNjQgNTVMMTI5IDEwOE05MSA0OEwxMzAgODNNMTI2IDY0TDYyIDEyNE0xMTMgNTJMNTMgMTAzTTkxIDQ4TDUwIDg0Ii8+PC9nPgo8ZyBmaWxsPSIjZjdmMmEyIiBvcGFjaXR5PSIuOCI+PGNpcmNsZSBjeD0iNzIiIGN5PSI3NSIgcj0iMiIvPjxjaXJjbGUgY3g9Ijk1IiBjeT0iNjciIHI9IjIiLz48Y2lyY2xlIGN4PSIxMTAiIGN5PSI4OSIgcj0iMiIvPjxjaXJjbGUgY3g9Ijc2IiBjeT0iMTExIiByPSIyIi8+PGNpcmNsZSBjeD0iOTgiIGN5PSIxMTUiIHI9IjIiLz48L2c+Cjwvc3ZnPgo=" alt="Pineapple" width="150" height="125"><small>TUESDAY</small><strong>Pineapple</strong></article>
+        <article class="fruit"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgMTUwIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IkFwcGxlLCBiZWV0cm9vdCBhbmQgY2Fycm90Ij4KPGRlZnM+PHJhZGlhbEdyYWRpZW50IGlkPSJhcHBsZSIgY3g9IjM1JSIgY3k9IjMwJSI+PHN0b3Agc3RvcC1jb2xvcj0iI2ZhNzY2YiIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2M4MjYyOSIvPjwvcmFkaWFsR3JhZGllbnQ+PHJhZGlhbEdyYWRpZW50IGlkPSJiZWV0Ij48c3RvcCBzdG9wLWNvbG9yPSIjZDk0ZTc2Ii8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjODQyMzQ0Ii8+PC9yYWRpYWxHcmFkaWVudD48L2RlZnM+CjxlbGxpcHNlIGN4PSI5MCIgY3k9IjEzNCIgcng9IjY4IiByeT0iNiIgZmlsbD0iI2FhYSIgb3BhY2l0eT0iLjE3Ii8+CjxwYXRoIGQ9Ik01NSA1MlEzMyA0MCAyNCA1OEMxMSA4NyAyNyAxMjMgNDggMTI0UTU3IDEyMiA2NCAxMjRRODUgMTI4IDkyIDkxQzk1IDY4IDgyIDQ5IDY2IDQ5UTU5IDQ3IDU1IDUyWiIgZmlsbD0idXJsKCNhcHBsZSkiLz4KPHBhdGggZD0iTTU2IDUzUTU2IDMxIDYzIDIzIiBzdHJva2U9IiM2NzQzMjEiIHN0cm9rZS13aWR0aD0iNSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PHBhdGggZD0iTTYyIDMwUTc0IDE0IDkxIDI4UTc5IDQxIDYyIDMwWiIgZmlsbD0iIzU2YTQzZSIvPgo8cGF0aCBkPSJNOTEgNjZROTIgNDQgMTAyIDM0IiBzdHJva2U9IiM0NTkzM2YiIHN0cm9rZS13aWR0aD0iNSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PHBhdGggZD0iTTEwMyAzOFExMTEgMTUgMTI2IDE4TDExMSA0NFoiIGZpbGw9IiM2NWFkNGYiLz4KPHBhdGggZD0iTTkxIDYzTDExNiA2M0wxMDMgMTMyWiIgZmlsbD0iI2YyOWIyOSIvPjxwYXRoIGQ9Ik05MSA2M1ExMDQgNzEgMTE2IDYzIiBmaWxsPSJub25lIiBzdHJva2U9IiNkNTc2MjQiIHN0cm9rZS13aWR0aD0iMyIvPgo8cGF0aCBkPSJNMTE5IDgwUTEyOCA3MCAxNDMgNzhRMTU5IDkyIDE0OCAxMTlRMTM3IDEzOSAxMjcgMTE4UTExMSA5MSAxMTkgODBaIiBmaWxsPSJ1cmwoI2JlZXQpIi8+CjxwYXRoIGQ9Ik0xMzIgNzdRMTE5IDU1IDEzMyA0NSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNTA4YTM5IiBzdHJva2Utd2lkdGg9IjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxwYXRoIGQ9Ik0xMzMgNTNRMTQ0IDMyIDE1MyA0M1ExNTIgNTUgMTM1IDYzWiIgZmlsbD0iIzRlOWQ0MiIvPjxwYXRoIGQ9Ik0xMzIgNTdRMTE0IDQxIDExMiA0OVExMTIgNjIgMTMxIDY0WiIgZmlsbD0iIzZmYjM1MSIvPgo8L3N2Zz4K" alt="Apple, beetroot and carrot" width="150" height="125"><small>WEDNESDAY</small><strong>ABC</strong><span>Apple · Beetroot · Carrot</span></article>
+        <article class="fruit"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgMTUwIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9Ik9yYW5nZSI+CjxkZWZzPjxyYWRpYWxHcmFkaWVudCBpZD0iYSIgY3g9IjMwJSIgY3k9IjI1JSI+PHN0b3Agc3RvcC1jb2xvcj0iI2ZmZDM1ZiIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2U2NmUxMyIvPjwvcmFkaWFsR3JhZGllbnQ+PC9kZWZzPgo8ZWxsaXBzZSBjeD0iOTEiIGN5PSIxMzUiIHJ4PSI1OSIgcnk9IjYiIGZpbGw9IiNhYWEiIG9wYWNpdHk9Ii4xNyIvPgo8cGF0aCBkPSJNNzYgNTNRNjggMjEgOTggMTlRMTA4IDQwIDgyIDU1WiIgZmlsbD0iIzRiOWYzYyIvPgo8Y2lyY2xlIGN4PSI3NSIgY3k9Ijg0IiByPSI0NiIgZmlsbD0idXJsKCNhKSIvPjxjaXJjbGUgY3g9IjExMyIgY3k9IjkyIiByPSI0MyIgZmlsbD0iI2ZmZjZjZSIvPjxjaXJjbGUgY3g9IjExMyIgY3k9IjkyIiByPSIzNiIgZmlsbD0iI2ZmOTYxYSIvPgo8ZyBzdHJva2U9IiNmZmVkYmMiIHN0cm9rZS13aWR0aD0iMi44Ij48cGF0aCBkPSJNMTEzIDkyTDExMyA1Nk0xMTMgOTJMMTQwIDY1TTExMyA5MkwxNDkgOTJNMTEzIDkyTDE0MCAxMTlNMTEzIDkyTDExMyAxMjhNMTEzIDkyTDg2IDExOU0xMTMgOTJMNzcgOTJNMTEzIDkyTDg2IDY1Ii8+PC9nPgo8Y2lyY2xlIGN4PSIxMTMiIGN5PSI5MiIgcj0iMzYiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZjRkNSIgc3Ryb2tlLXdpZHRoPSIzIi8+PGNpcmNsZSBjeD0iMTEzIiBjeT0iOTIiIHI9IjUiIGZpbGw9IiNmZmVhYWQiLz4KPC9zdmc+Cg==" alt="Orange" width="150" height="125"><small>THURSDAY</small><strong>Orange</strong></article>
+        <article class="fruit"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgMTUwIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IldhdGVybWVsb24iPgo8ZWxsaXBzZSBjeD0iOTMiIGN5PSIxMzciIHJ4PSI1OCIgcnk9IjYiIGZpbGw9IiNhYWEiIG9wYWNpdHk9Ii4xOCIvPgo8cGF0aCBkPSJNMjkgMTA5UTkzIDE0OCAxNTcgMTA5TDkyIDI1WiIgZmlsbD0iIzJmOGU0NCIvPjxwYXRoIGQ9Ik0zNSAxMDlROTMgMTQzIDE1MSAxMDlMOTIgMzJaIiBmaWxsPSIjZjhlZGMxIi8+CjxwYXRoIGQ9Ik00MiAxMDdROTIgMTM3IDE0NCAxMDdMOTIgMzlaIiBmaWxsPSIjZjA0ZjU3Ii8+CjxnIGZpbGw9IiMzOTMzMmEiPjxwYXRoIGQ9Ik05MiA3MHEtOSA1IDAgMTVxOC03IDAtMTVaIi8+PHBhdGggZD0iTTcwIDg4cS0xMCA1IDAgMTRxOS03IDAtMTRaIi8+PHBhdGggZD0iTTExMyA4OXEtOCA0IDAgMTRxOS04IDAtMTRaIi8+PHBhdGggZD0iTTkxIDExMHEtOSA0IDAgMTJxOS03IDAtMTJaIi8+PC9nPgo8L3N2Zz4K" alt="Watermelon" width="150" height="125"><small>FRIDAY</small><strong>Watermelon</strong></article>
+      </div>
+    </section>
+
+    <section class="wrap promise-section" aria-label="Our promise">
+      <div><span class="promise-icon">◯</span><strong>300 ml</strong><small>per bottle</small></div>
+      <div><span class="promise-icon">✳</span><strong>No added</strong><small>sugar, water or ice</small></div>
+      <div><span class="promise-icon">❀</span><strong>Freshly</strong><small>prepared</small></div>
+      <div><span class="promise-icon">◷</span><strong>Enjoy within</strong><small>2 hours</small></div>
+    </section>
+
+    <section class="wrap order-section" id="order" aria-labelledby="order-heading">
+      <div class="section-heading"><h2 id="order-heading">ORDER YOUR SUBSCRIPTION</h2><span>Quick ordering on WhatsApp</span></div>
+      <div class="order-grid">
+        <form id="order-form" class="order-panel" novalidate>
+          <fieldset class="field-group plan-group">
+            <legend><span class="step-number">01</span> Choose your plan</legend>
+            <div class="plan-options">
+              <label class="plan-card is-selected"><input name="plan_days" type="radio" value="5" checked required><span class="plan-title">5 days</span><span class="plan-caption">1 week</span><strong>₹599</strong><span class="choose-mark" aria-hidden="true">✓</span></label>
+              <label class="plan-card"><input name="plan_days" type="radio" value="10"><span class="plan-title">10 days</span><span class="plan-caption">2 weeks</span><strong>₹1,099</strong><span class="choose-mark" aria-hidden="true">✓</span></label>
+              <label class="plan-card"><input name="plan_days" type="radio" value="20"><span class="plan-title">20 days</span><span class="plan-caption">4 weeks</span><strong>₹1,999</strong><span class="choose-mark" aria-hidden="true">✓</span></label>
+            </div>
+          </fieldset>
+
+          <fieldset class="field-group">
+            <legend><span class="step-number">02</span> Delivery timing</legend>
+            <div class="slot-options">
+              <label class="slot-card is-selected"><input type="radio" name="delivery_slot" value="morning" checked required><span class="slot-icon" aria-hidden="true">☼</span><span><strong>Morning</strong><small>8:00 – 9:00 AM</small></span><span class="radio-dot" aria-hidden="true"></span></label>
+              <label class="slot-card"><input type="radio" name="delivery_slot" value="afternoon"><span class="slot-icon" aria-hidden="true">◷</span><span><strong>Afternoon</strong><small>4:00 – 5:00 PM</small></span><span class="radio-dot" aria-hidden="true"></span></label>
+            </div>
+            <p class="hint">Your chosen slot remains the same for the entire subscription.</p>
+          </fieldset>
+
+          <fieldset class="field-group">
+            <legend><span class="step-number">03</span> Your delivery details</legend>
+            <div class="fields">
+              <label class="full">Full name<input type="text" name="name" autocomplete="name" minlength="2" maxlength="70" placeholder="Your name" required></label>
+              <label class="full">Mobile number<input type="tel" name="phone" autocomplete="tel-national" inputmode="numeric" maxlength="14" placeholder="10-digit mobile number" required></label>
+              <label>Tower / block<input type="text" name="tower" maxlength="50" placeholder="e.g. Tower A" required></label>
+              <label>Flat number<input type="text" name="flat" maxlength="30" placeholder="e.g. 1204" required></label>
+              <label class="full">Preferred start date<input type="date" name="start_date" min="2026-11-06" value="2026-11-06" required></label>
+            </div>
+            <p class="hint">Delivery within L&T Serene County only. Monday to Friday, excluding weekends.</p>
+          </fieldset>
+          <input class="invisible-field" name="website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <div id="form-error" class="form-error" role="alert" hidden></div>
+          <button class="button button-dark button-submit" type="submit" id="submit-order">Continue to WhatsApp <span aria-hidden="true">↗</span></button>
+          <p class="after-submit">Your details are saved as a request, then WhatsApp opens with a ready-to-send message. <strong>Please tap Send in WhatsApp.</strong> Your subscription is confirmed only after our team replies.</p>
+          <div id="form-success" class="form-success" role="status" hidden></div>
+        </form>
+
+        <aside class="summary-panel" aria-label="Order summary">
+          <div class="summary-label">YOUR SUBSCRIPTION</div>
+          <div class="summary-plan" id="summary-plan">5 delivery days</div>
+          <div class="summary-price" id="summary-price">₹599</div>
+          <div class="summary-line"><span>Bottle size</span><strong>300 ml</strong></div>
+          <div class="summary-line"><span>Delivery days</span><strong>Mon – Fri</strong></div>
+          <div class="summary-line"><span>Slot</span><strong id="summary-slot">8 – 9 AM</strong></div>
+          <div class="summary-line"><span>Daily juice</span><strong>Fixed weekly menu</strong></div>
+          <div class="summary-divider"></div>
+          <p><strong>No added sugar. No added water. No ice.</strong><br>Nothing complicated — just fruit and a fresher routine.</p>
+          <div class="summary-support">NEED HELP? <a href="https://wa.me/918074062979" rel="noopener noreferrer">WhatsApp 8074062979</a></div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer"><div class="wrap footer-inner"><div><strong class="footer-brand">PureFruit</strong><span>Naturally Fresh.</span></div><div>Real fruit. Real people. A healthier tomorrow.</div><div>© PureFruit · <a href="https://www.purefruit.in">purefruit.in</a></div></div></footer>
+  <script>
+(() => {
+  'use strict';
+  const form = document.getElementById('order-form');
+  if (!form) return;
+  const plans = {5:599,10:1099,20:1999};
+  const slots = {morning:'8 – 9 AM', afternoon:'4 – 5 PM'};
+  const minLaunch = '2026-11-06';
+  const preview = document.body.dataset.preview === 'true';
+
+  function localISO(date) {
+    const y=date.getFullYear(),m=String(date.getMonth()+1).padStart(2,'0'),d=String(date.getDate()).padStart(2,'0');
+    return `${y}-${m}-${d}`;
+  }
+  function nextWeekday(d) {
+    const v=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+    while(v.getDay()===0 || v.getDay()===6) v.setDate(v.getDate()+1);
+    return v;
+  }
+  const now = new Date();
+  const startField = form.elements.start_date;
+  const first = new Date(Math.max(new Date(minLaunch+'T12:00:00').getTime(), new Date(now.getFullYear(),now.getMonth(),now.getDate(),12).getTime()));
+  const minStart=localISO(nextWeekday(first));
+  startField.min=minStart;
+  if(!startField.value || startField.value<minStart) startField.value=minStart;
+
+  function updateChoices(){
+    form.querySelectorAll('.plan-card').forEach(el=>el.classList.toggle('is-selected',el.querySelector('input').checked));
+    form.querySelectorAll('.slot-card').forEach(el=>el.classList.toggle('is-selected',el.querySelector('input').checked));
+    const days=Number(form.elements.plan_days.value);
+    document.getElementById('summary-plan').textContent=`${days} delivery days`;
+    document.getElementById('summary-price').textContent=`₹${plans[days].toLocaleString('en-IN')}`;
+    document.getElementById('summary-slot').textContent=slots[form.elements.delivery_slot.value];
+  }
+  form.addEventListener('change',updateChoices); updateChoices();
+
+  function showError(message){const div=document.getElementById('form-error');div.textContent=message;div.hidden=false;div.scrollIntoView({block:'nearest',behavior:'smooth'});}
+  function whatsappMessage(data,ref){
+    const date=new Date(data.start_date+'T12:00:00');
+    const readable=date.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+    return ['Hello PureFruit! I would like to request a juice subscription.','',`Reference: ${ref}`,`Plan: ${data.plan_days} delivery days – ₹${plans[data.plan_days].toLocaleString('en-IN')}`,`Delivery: ${data.delivery_slot==='morning'?'Morning (8–9 AM)':'Afternoon (4–5 PM)'}`,`Starting: ${readable}`,`Name: ${data.name}`,`Tower: ${data.tower}`,`Flat: ${data.flat}`,`Phone: ${data.phone}`,'','Please confirm availability and payment instructions.'].join('\n');
+  }
+  form.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const err=document.getElementById('form-error');err.hidden=true;
+    const success=document.getElementById('form-success');success.hidden=true;
+    const dateVal=startField.value;
+    if(!form.reportValidity()) return;
+    if(!/^\d{10}$/.test(form.elements.phone.value.replace(/\D/g,''))){showError('Enter a valid 10-digit Indian mobile number.');return;}
+    if(!dateVal || dateVal<minStart || [0,6].includes(new Date(dateVal+'T12:00:00').getDay())){showError('Choose a weekday start date from '+minStart+' onwards.');return;}
+    const data={name:form.elements.name.value.trim(),phone:form.elements.phone.value.trim(),tower:form.elements.tower.value.trim(),flat:form.elements.flat.value.trim(),plan_days:Number(form.elements.plan_days.value),delivery_slot:form.elements.delivery_slot.value,start_date:dateVal,website:form.elements.website.value};
+    const button=document.getElementById('submit-order');button.disabled=true;button.textContent='Preparing your WhatsApp message…';
+    try{
+      let ref,url;
+      if(preview){
+        ref='PREVIEW';
+        url='https://wa.me/918074062979?text='+encodeURIComponent(whatsappMessage(data,ref));
+      } else {
+        const response=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':document.querySelector('meta[name="csrf-token"]').content},credentials:'same-origin',body:JSON.stringify(data)});
+        const result=await response.json();
+        if(!response.ok) throw new Error(result.error || 'Could not save your request. Please try again.');
+        ref=result.reference;url=result.whatsapp_url;
+      }
+      const a=document.createElement('a');a.href=url;a.rel='noopener noreferrer';a.textContent='Open WhatsApp to send your request';
+      success.replaceChildren(document.createTextNode(`Request reference: ${ref}. `),a);
+      success.hidden=false;
+      window.location.assign(url);
+    }catch(error){showError(error.message || 'Something went wrong. Please try again.');}
+    finally{button.disabled=false;button.innerHTML='Continue to WhatsApp <span aria-hidden="true">↗</span>';}
+  });
+})();
+
+</script>
+</body>
+</html>

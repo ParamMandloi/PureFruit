@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 150" role="img" aria-label="Sweet lime">
+<defs><radialGradient id="a" cx="34%" cy="26%"><stop stop-color="#eafc7d"/><stop offset=".7" stop-color="#bedc2b"/><stop offset="1" stop-color="#83a91f"/></radialGradient><radialGradient id="b" cx="36%" cy="30%"><stop stop-color="#fffabc"/><stop offset="1" stop-color="#ffcc23"/></radialGradient></defs>
+<ellipse cx="95" cy="134" rx="61" ry="7" fill="#aaa" opacity=".19"/>
+<path d="M92 51Q87 20 114 12Q132 24 109 46Z" fill="#3c8c31"/><path d="M89 57Q55 32 33 53Q47 78 78 70Z" fill="#58a640"/>
+<circle cx="78" cy="86" r="48" fill="url(#a)"/>
+<circle cx="113" cy="91" r="47" fill="#f5efb6"/><circle cx="113" cy="91" r="40" fill="url(#b)"/>
+<g stroke="#fffae7" stroke-width="3.2"><path d="M113 91L113 51M113 91L141 64M113 91L152 91M113 91L141 119M113 91L113 130M113 91L85 119M113 91L73 91M113 91L85 63"/></g>
+<circle cx="113" cy="91" r="5" fill="#fff8d9"/><circle cx="113" cy="91" r="40" fill="none" stroke="#fffde9" stroke-width="3"/>
+</svg>
