@@ -1,0 +1,44 @@
+PUREFRUIT UPI EXPRESS — DEPLOYMENT (visual + UPI checkout only)
+
+This package contains ONLY 6 changed website files. It does NOT contain your customer
+orders, your live Railway volume, secrets, fruit images or database.
+
+1. Before editing, BACK UP the Railway /data/orders.db database and keep the previous
+   GitHub commit so you can roll back.
+2. Open https://github.com/ParamMandloi/PureFruit on branch main.
+3. Replace these exact files at repository root (do not upload enclosing folder):
+   app.py
+   requirements.txt
+   templates/index.html
+   templates/admin.html
+   static/app.js
+   static/style.css
+4. Commit to main. Railway should redeploy automatically. Keep existing /data volume,
+   admin password, domain, Razorpay historical settings and PAYMENT_MODE=upi_qr.
+5. Test with your own phone BEFORE accepting customer payment:
+   - create a dummy 5-day plan order and verify QR shows Rs 599 and payee
+     GREENRISE BUZZ PRIVATE LIMITED;
+   - scan on PhonePe and another UPI app and ensure amount is prefilled;
+   - try one controlled real transaction, verify it shows up in PhonePe Business,
+     and verify the reference is attributable to the same order;
+   - click I've completed payment: order must show pending_verification, NOT paid;
+   - in /staff, copy the real transaction UTR from PhonePe Business and verify the
+     amount to mark the order paid. Try duplicate UTR on another order; must fail.
+6. If your PhonePe merchant account does not accept amount-prefilled third-party
+   UPI requests, open the fallback Original PhonePe QR on the checkout page.
+   Do NOT assume QR scan or returning from UPI app means money was received.
+
+Payment destination was decoded from the QR you supplied:
+UPI VPA: 9619140077-gsb@ibl
+Payee: GREENRISE BUZZ PRIVATE LIMITED
+This is a payee identifier, NOT a credential. If you change your merchant account,
+set Railway UPI_PAYEE_ADDRESS and UPI_PAYEE_NAME to VERIFIED values first.
+
+NO AUTOMATIC PAYMENT VERIFICATION: Static QR and direct UPI deep links do not
+provide authenticated PSP payment callbacks to this website. Staff must verify
+credit in PhonePe Business/bank before fulfilment. Customer UTR is optional;
+staff MUST record the UTR found in PhonePe Business at confirmation. This is
+intentional to prevent reuse of one credit for multiple orders.
+
+ROLLBACK: GitHub Revert commit and redeploy if tested payment amounts/payee
+are wrong. Do not delete the mounted Railway data volume.

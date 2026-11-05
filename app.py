@@ -9,13 +9,16 @@ import secrets
 import sqlite3
 from datetime import date, datetime, timedelta
 from functools import wraps
+from urllib.parse import urlencode
+
+import qrcode
 
 import requests
 from zoneinfo import ZoneInfo
 
 from flask import (
     Flask, Response, abort, flash, jsonify, redirect, render_template,
-    request, session, url_for,
+    request, session, url_for, send_file,
 )
 
 app = Flask(__name__)
@@ -36,6 +39,11 @@ RAZORPAY_WEBHOOK_SECRET = os.getenv("RAZORPAY_WEBHOOK_SECRET", "").strip()
 RAZORPAY_API = "https://api.razorpay.com/v1"
 PAYMENTS_READY = bool(RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET and RAZORPAY_WEBHOOK_SECRET)
 PAYMENT_MODE = os.getenv("PAYMENT_MODE", "upi_qr").strip().lower()
+# Recipient data decoded from the PhonePe QR supplied by the merchant. These are
+# public payee identifiers, not login credentials or payment-gateway secrets.
+UPI_PAYEE_ADDRESS = os.getenv("UPI_PAYEE_ADDRESS", "9619140077-gsb@ibl").strip()
+UPI_PAYEE_NAME = os.getenv("UPI_PAYEE_NAME", "GREENRISE BUZZ PRIVATE LIMITED").strip()
+UPI_PAYEE_MCC = os.getenv("UPI_PAYEE_MCC", "0000").strip()
 LAUNCH_DATE = date(2026, 11, 6)
 PLANS = {5: 599, 10: 1099, 20: 1999}
 SLOTS = {"morning": "Morning (8–9 AM)", "afternoon": "Afternoon (4–5 PM)"}
@@ -310,6 +318,91 @@ def create_upi_order():
                    payee="GREENRISE BUZZ PRIVATE LIMITED", status="payment_pending"), 201
 
 
+def create_upi_uri(order, mode="01"):
+    """Construct an amount-prefilled UPI request, *not* a payment receipt.
+
+    Never copy signed/proprietary QR data, accept a VPA from the browser, or
+    assume a UPI-app return means money arrived. The original merchant QR is
+    still available as a fallback if an app rejects amount-prefilled links.
+    """
+    if order.get("payment_method") != "upi_qr" or int(order["price"]) not in PLANS.values():
+        raise ValueError("Invalid UPI order")
+    if not re.fullmatch(r"PF-[A-Za-z0-9-]{8,40}", order["order_ref"]):
+        raise ValueError("Invalid order reference")
+    params = [
+        ("pa", UPI_PAYEE_ADDRESS),
+        ("pn", UPI_PAYEE_NAME),
+        ("am", f'{int(order["price"]):.2f}'),
+        ("cu", "INR"),
+        ("tr", order["order_ref"]),
+        ("tn", f'PureFruit {order["order_ref"]}'),
+    ]
+    if UPI_PAYEE_MCC:
+        params.append(("mc", UPI_PAYEE_MCC))
+    # Standard 01 = QR, 04 = mobile UPI intent; provider support varies.
+    params.append(("mode", mode))
+    return "upi://pay?" + urlencode(params)
+
+
+@app.get("/api/upi/orders/<order_ref>/payment")
+def get_upi_payment(order_ref):
+    order = find_order(ref=order_ref)
+    if not order or order.get("payment_method") != "upi_qr":
+        return jsonify(error="Order not found."), 404
+    if order["status"] == "cancelled":
+        return jsonify(error="Order cancelled."), 410
+    if order["payment_status"] == "paid":
+        return jsonify(reference=order_ref, status="paid")
+    return jsonify(reference=order_ref, amount=order["price"],
+                   payee=UPI_PAYEE_NAME, status=order["payment_status"],
+                   intent=create_upi_uri(order, mode="04"),
+                   qr=url_for("upi_order_qr", order_ref=order_ref))
+
+
+@app.get("/api/upi/orders/<order_ref>/qr.png")
+def upi_order_qr(order_ref):
+    order = find_order(ref=order_ref)
+    if not order or order.get("payment_method") != "upi_qr":
+        abort(404)
+    if order["status"] == "cancelled":
+        abort(410)
+    qr = qrcode.QRCode(version=None, error_correction=qrcode.constants.ERROR_CORRECT_M,
+                       box_size=10, border=4)
+    qr.add_data(create_upi_uri(order, mode="01"))
+    qr.make(fit=True)
+    image = qr.make_image(fill_color="black", back_color="white")
+    output = io.BytesIO()
+    image.save(output, format="PNG")
+    output.seek(0)
+    response = send_file(output, mimetype="image/png", download_name=f'{order_ref}-upi.png')
+    response.headers["Cache-Control"] = "private, no-store"
+    return response
+
+
+@app.post("/api/upi/orders/<order_ref>/claim")
+def claim_upi_payment(order_ref):
+    """A customer CLAIMED to have paid; never mark the order paid here."""
+    require_csrf()
+    if PAYMENT_MODE != "upi_qr":
+        return jsonify(error="UPI checkout is not enabled."), 503
+    timestamp = now_ist().isoformat(timespec="seconds")
+    with get_db() as con:
+        row = con.execute("SELECT payment_method,payment_status,status FROM orders WHERE order_ref=?", (order_ref,)).fetchone()
+        if not row or row["payment_method"] != "upi_qr":
+            return jsonify(error="UPI order not found."), 404
+        if row["status"] == "cancelled":
+            return jsonify(error="This order was cancelled."), 409
+        if row["payment_status"] == "paid":
+            return jsonify(reference=order_ref, status="paid")
+        # Idempotent: repeat taps never create a second order or extra payment.
+        con.execute("""UPDATE orders SET payment_status='pending_verification',
+                       upi_submitted_at=COALESCE(upi_submitted_at, ?), updated_at=?
+                       WHERE order_ref=? AND payment_status!='paid'""",
+                    (timestamp, timestamp, order_ref))
+    return jsonify(reference=order_ref, status="pending_verification",
+                   message="Payment reported. Staff will confirm after checking the actual PhonePe credit.")
+
+
 @app.post("/api/upi/orders/<order_ref>/submit")
 def submit_upi_reference(order_ref):
     require_csrf()
@@ -355,24 +448,34 @@ def staff_confirm_upi(order_ref):
         return redirect(url_for("staff_dashboard"))
     confirmed_utr = str(request.form.get("confirmed_utr", "")).strip().upper()
     verified_amount = str(request.form.get("verified_amount", "")).strip()
-    if (not current["upi_reference"] or not hmac.compare_digest(confirmed_utr, current["upi_reference"]) or
-            verified_amount != str(current["price"]) or request.form.get("bank_credit_checked") != "yes"):
-        flash("Not confirmed. Verify the actual PhonePe credit, exact amount and transaction reference first.", "error")
+    # Customer UTR is optional in the express flow. Staff must record the
+    # transaction reference from an ACTUAL PhonePe Business/bank credit.
+    # Unique DB index prevents reuse of the same credited transaction.
+    if (not re.fullmatch(r"[A-Z0-9-]{10,40}", confirmed_utr) or
+            (current["upi_reference"] and not hmac.compare_digest(confirmed_utr, current["upi_reference"])) or
+            verified_amount != str(current["price"]) or request.form.get("bank_credit_checked") != "yes" or
+            current["payment_status"] != "pending_verification"):
+        flash("Not confirmed. Match a real PhonePe bank credit, amount and unique UTR first.", "error")
         return redirect(url_for("staff_dashboard"))
     timestamp = now_ist().isoformat(timespec="seconds")
     old_start = date.fromisoformat(current["start_date"])
     start_date = max(old_start, next_available_day()).isoformat()
-    with get_db() as con:
-        cur = con.execute("""UPDATE orders SET payment_status='paid', status='confirmed',
-                     paid_at=?, upi_verified_at=?, upi_verified_by='staff',
-                     upi_verified_amount=?,start_date=?,updated_at=?
-                     WHERE order_ref=? AND payment_method='upi_qr'
-                     AND payment_status!='paid' AND status!='cancelled' AND upi_reference=?""",
-                  (timestamp, timestamp, current["price"], start_date, timestamp,
-                   order_ref, confirmed_utr))
-        if cur.rowcount != 1:
-            flash("The order changed; refresh and check before confirming.", "error")
-            return redirect(url_for("staff_dashboard"))
+    try:
+        with get_db() as con:
+            cur = con.execute("""UPDATE orders SET payment_status='paid', status='confirmed',
+                         paid_at=?, upi_verified_at=?, upi_verified_by='staff',
+                         upi_verified_amount=?, start_date=?, updated_at=?, upi_reference=?
+                         WHERE order_ref=? AND payment_method='upi_qr'
+                         AND payment_status='pending_verification' AND status!='cancelled'
+                         AND (upi_reference IS NULL OR upi_reference=?)""",
+                      (timestamp, timestamp, current["price"], start_date, timestamp,
+                       confirmed_utr, order_ref, confirmed_utr))
+            if cur.rowcount != 1:
+                flash("The order changed; refresh and check before confirming.", "error")
+                return redirect(url_for("staff_dashboard"))
+    except sqlite3.IntegrityError:
+        flash("That PhonePe UTR was already used for another order. Do not confirm twice.", "error")
+        return redirect(url_for("staff_dashboard"))
     flash(f"UPI bank credit verified for {order_ref}. Subscription confirmed. Start date: {start_date}.", "success")
     return redirect(url_for("staff_dashboard"))
 
