@@ -7,7 +7,19 @@
   <meta name="description" content="PureFruit: naturally fresh 300 ml juice delivered at L&T Serene County. Order your fixed weekday subscription and pay using PhonePe UPI QR.">
   <meta name="csrf-token" content="{{ csrf }}">
   <title>PureFruit · Naturally Fresh</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='dhanteras-2026-2') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='dhanteras-2026-live') }}">
+  <style>
+    /* Promo only: retain the working live website/hero stylesheet unchanged. */
+    [hidden]{display:none!important}
+    .dhanteras-banner{display:flex;flex-wrap:wrap;align-items:center;gap:7px 14px;padding:13px 17px;margin:-5px 0 18px;border:1px solid #dbdbd9;border-radius:10px;background:#f5f5f3;color:#333;font-size:12px}
+    .dhanteras-banner strong{letter-spacing:.07em;font-size:11px}
+    .dhanteras-banner span{color:#626262}
+    .dhanteras-savings{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:-5px 0 16px;color:#5c5c5c;font-size:12px}
+    .dhanteras-savings span{text-decoration:line-through}
+    .dhanteras-savings strong{font-size:11px;color:#3d3d3d}
+    .fields select{width:100%;min-width:0;min-height:45px;border:1px solid #d2d2d0;border-radius:7px;background:#fff;padding:10px;color:#333;font:inherit}
+    @media(max-width:620px){.dhanteras-banner{padding:12px;font-size:11px}}
+  </style>
 </head>
 <body data-preview="false" data-payments-ready="{{ 'true' if razorpay_ready else 'false' }}">
   <header class="topbar wrap">
@@ -51,7 +63,7 @@
       <div class="section-heading"><h2 id="order-heading">ORDER YOUR SUBSCRIPTION</h2><span>UPI instant checkout</span></div>
       <div id="dhanteras-banner" class="dhanteras-banner" {% if not checkout.promo_active %}hidden{% endif %}>
         <strong>DHANTERAS OFFER · 25% OFF</strong>
-        <span>Only on Friday, 6 November 2026 (India time). Prices below are discounted today.</span>
+        <span>Offer live now · Ends Friday, 6 November at 11:59 PM IST. Discounted prices are shown below.</span>
       </div>
       <div class="order-grid">
         <form id="order-form" class="order-panel" novalidate>
@@ -118,7 +130,7 @@
           <div class="summary-price" id="summary-price">₹{{ checkout.plans['5'] | int }}</div>
           <div class="dhanteras-savings" id="dhanteras-savings" {% if not checkout.promo_active %}hidden{% endif %}>
             <span id="summary-regular-price">₹599</span>
-            <strong>25% OFF · Dhanteras only</strong>
+            <strong>25% OFF · Ends 6 Nov</strong>
           </div>
           <div class="summary-line"><span>Bottle size</span><strong>300 ml</strong></div>
           <div class="summary-line"><span>Delivery days</span><strong>Mon – Fri</strong></div>
@@ -134,6 +146,6 @@
 
   <footer class="footer"><div class="wrap footer-inner"><div><strong class="footer-brand">PureFruit</strong><span>Naturally Fresh.</span></div><div>Real fruit. Real people. A healthier tomorrow.</div><div>© PureFruit · <a href="https://www.purefruit.in">purefruit.in</a></div></div></footer>
   <script id="checkout-config" type="application/json">{{ checkout | tojson }}</script>
-  <script src="{{ url_for('static', filename='app.js', v='dhanteras-2026-2') }}" defer></script>
+  <script src="{{ url_for('static', filename='app.js', v='dhanteras-2026-live') }}" defer></script>
 </body>
 </html>

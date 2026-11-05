@@ -1,6 +1,16 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>PureFruit · Staff Report</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>PureFruit · Staff Report</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<style>
+/* Staff-only. Does not affect the public homepage or bottle layout. */
+.upi-staff-controls{flex:1 1 470px;max-width:660px;min-width:0}
+.upi-order-details{flex:1 1 220px;line-height:1.75;min-width:0;overflow-wrap:anywhere}
+.upi-review-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px}
+.upi-review-actions form{display:flex;gap:7px;flex:1 1 200px}
+.upi-review-actions input[name="review_note"]{min-width:0;max-width:180px;width:100%;font-size:12px;padding:7px;border:1px solid #ccc;border-radius:7px}
+.upi-review-actions button{white-space:nowrap;flex:0 0 auto}
+@media(max-width:700px){.upi-staff-controls{width:100%;max-width:none;margin-top:10px}.upi-review-actions form{flex-wrap:wrap}.upi-review-actions button{white-space:normal}}
+</style></head>
 <body class="staff-body">
   <header class="staff-top"><div class="wrap staff-top-inner">
     <a class="staff-brand" href="{{ url_for('staff_dashboard') }}">PureFruit<small>ORDER REPORT</small></a>
@@ -8,7 +18,7 @@
   </div></header>
   <main class="wrap staff-main">
     <h1>Order overview</h1>
-    <p class="staff-sub">UPI orders need a real PhonePe bank-credit check before confirmation. Razorpay-verified historical payments stay unchanged. Unpaid orders never appear on the delivery list.</p>
+    <p class="staff-sub">Use Payment Received, Payment Not Received, or Check Later after checking PhonePe Business. UPI orders need a real PhonePe bank-credit check before confirmation. Razorpay-verified historical payments stay unchanged. Unpaid orders never appear on the delivery list.</p>
     {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="alert">{{ message }}</div>{% endfor %}{% endwith %}
     <section class="stat-grid" aria-label="Order statistics">
       <div class="stat"><small>Total checkouts</small><strong>{{ stats.requests }}</strong></div>
@@ -17,22 +27,49 @@
       <div class="stat"><small>Verified value</small><strong>₹{{ '{:,}'.format(stats.booked_value) }}</strong></div>
     </section>
 
+    {% macro upi_review_row(order) %}
+      <div class="upi-staff-row">
+        <div class="upi-order-details"><strong>{{ order.order_ref }}</strong> · {{ order.name }}<br>
+          <span class="muted">{{ order.tower }} / {{ order.flat }} · {{ order.phone }}</span><br>
+          Amount <strong>₹{{ '{:,}'.format(order.price) }}</strong> · UTR <strong>{{ order.upi_reference or 'Not yet available' }}</strong><br>
+          {% if order.upi_review_status == 'not_received' %}<span class="tag pending">Payment not received</span>{% elif order.upi_review_status == 'check_later' %}<span class="tag pending">Check later</span>{% endif %}
+          {% if order.upi_review_note %}<span class="muted"> · Staff note: {{ order.upi_review_note }}</span>{% endif %}
+        </div>
+        <div class="upi-staff-controls">
+          <form method="post" class="upi-confirm-form" action="{{ url_for('staff_confirm_upi', order_ref=order.order_ref) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf }}">
+            <label>Bank transaction UTR<input type="text" name="confirmed_utr" minlength="10" maxlength="40" pattern="[A-Za-z0-9-]{10,40}" autocomplete="off" required placeholder="From PhonePe Business" value="{{ order.upi_reference or '' }}"></label>
+            <label>Bank-confirmed amount (₹)<input type="number" min="1" max="100000" name="verified_amount" required value="{{ order.price }}"></label>
+            <label class="upi-verify-check"><input type="checkbox" name="bank_credit_checked" value="yes" required> I checked the actual bank credit</label>
+            <button class="small-button" type="submit">Payment Received — Confirm</button>
+          </form>
+          <div class="upi-review-actions">
+            <form method="post" action="{{ url_for('staff_review_upi', order_ref=order.order_ref) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf }}">
+              <input type="hidden" name="review_action" value="not_received">
+              <input name="review_note" aria-label="Optional note for payment not received" placeholder="Optional note" maxlength="250">
+              <button class="small-button secondary" type="submit">Payment Not Received</button>
+            </form>
+            <form method="post" action="{{ url_for('staff_review_upi', order_ref=order.order_ref) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf }}">
+              <input type="hidden" name="review_action" value="{{ 'recheck' if order.upi_review_status != 'awaiting' else 'check_later' }}">
+              <button class="small-button secondary" type="submit">{{ 'Recheck Payment' if order.upi_review_status != 'awaiting' else 'Check Later' }}</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    {% endmacro %}
     <section class="staff-card" aria-labelledby="upi-review-heading">
       <div class="staff-heading"><h2 id="upi-review-heading">UPI payments awaiting verification</h2></div>
-      <p class="staff-legend">Customers no longer need to enter a UTR. Verify the incoming bank credit in PhonePe Business, match amount and payer, and record the actual bank transaction reference here. Check carefully when multiple orders have the same amount. Do not rely on customer confirmation alone.</p>
-      {% set pending_upi = orders|selectattr('payment_method','equalto','upi_qr')|selectattr('payment_status','equalto','pending_verification')|list %}
-      {% for order in pending_upi %}
-      <div class="upi-staff-row">
-        <div><strong>{{ order.order_ref }}</strong> · {{ order.name }}<br><span class="muted">{{ order.tower }} / {{ order.flat }} · {{ order.phone }}</span><br>Amount <strong>₹{{ '{:,}'.format(order.price) }}</strong> · Bank UTR <strong>{{ order.upi_reference or 'Awaiting staff verification' }}</strong></div>
-        <form method="post" class="upi-confirm-form" action="{{ url_for('staff_confirm_upi', order_ref=order.order_ref) }}">
-          <input type="hidden" name="csrf_token" value="{{ csrf }}">
-          <label>Actual PhonePe bank UTR (staff only)<input type="text" name="confirmed_utr" minlength="10" maxlength="40" pattern="[A-Za-z0-9-]{10,40}" autocomplete="off" required placeholder="Copy UTR from PhonePe Business" value="{{ order.upi_reference or '' }}"></label>
-          <label>Bank-confirmed amount (₹)<input type="number" min="1" max="100000" name="verified_amount" required value="{{ order.price }}"></label>
-          <label class="upi-verify-check"><input type="checkbox" name="bank_credit_checked" value="yes" required> I checked the actual credit in PhonePe Business</label>
-          <button class="small-button" type="submit">Confirm verified payment</button>
-        </form>
-      </div>
-      {% else %}<p class="empty">No UPI payments currently awaiting verification.</p>{% endfor %}
+      <p class="staff-legend">Only verify a payment after checking the actual PhonePe Business credit, amount and unique bank UTR. Payment Not Received and Check Later move an order to follow-up without activating delivery.</p>
+      {% set awaiting_upi = orders|selectattr('payment_method','equalto','upi_qr')|selectattr('payment_status','equalto','pending_verification')|selectattr('upi_review_status','equalto','awaiting')|list %}
+      {% for order in awaiting_upi %}{{ upi_review_row(order) }}{% else %}<p class="empty">No payments awaiting first verification.</p>{% endfor %}
+    </section>
+    <section class="staff-card" aria-labelledby="upi-follow-up-heading">
+      <div class="staff-heading"><h2 id="upi-follow-up-heading">UPI payment follow-ups <span class="tag">{{ stats.upi_follow_up }}</span></h2></div>
+      <p class="staff-legend">Unverified orders stay here for rechecking. Staff may confirm later if a real bank credit is found.</p>
+      {% set follow_up = orders|selectattr('payment_method','equalto','upi_qr')|selectattr('payment_status','equalto','pending_verification')|rejectattr('upi_review_status','equalto','awaiting')|list %}
+      {% for order in follow_up %}{{ upi_review_row(order) }}{% else %}<p class="empty">No UPI payments need follow-up.</p>{% endfor %}
     </section>
     <section class="staff-card" aria-labelledby="delivery-heading">
       <div class="staff-heading"><h2 id="delivery-heading">Daily delivery list</h2><a class="gray-link" href="{{ url_for('export_deliveries', delivery_date=selected_date.isoformat()) }}">Download CSV</a></div>
