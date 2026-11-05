@@ -2,25 +2,58 @@
   'use strict';
   const form=document.getElementById('order-form');
   if(!form) return;
-  const plans={5:599,10:1099,20:1999};
+  // Prices are always supplied by the India-time server.
+  // Refreshing the config handles the 6 Nov offer and automatic 7 Nov expiry.
+  let checkoutConfig=JSON.parse(document.getElementById('checkout-config').textContent);
+  let plans=checkoutConfig.plans;
   const slots={morning:'8 – 9 AM',afternoon:'4 – 5 PM'};
   const submit=document.getElementById('submit-order');
   const csrf=document.querySelector('meta[name="csrf-token"]').content;
   const startField=form.elements.start_date;
-  function iso(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
-  function nextWeekday(d){const t=new Date(d.getFullYear(),d.getMonth(),d.getDate());while([0,6].includes(t.getDay()))t.setDate(t.getDate()+1);return t;}
-  // Server provides the actual minimum for India time, so do not override it from device time.
-  const minStart=startField.min;
-  if(!startField.value||startField.value<minStart) startField.value=minStart;
+  let minStart=checkoutConfig.min_start;
+  function applyCheckoutConfig(config){
+    if(currentRef) return; // Existing orders retain the amount on their own UPI QR.
+    checkoutConfig=config;
+    plans=config.plans;
+    minStart=config.min_start;
+    // Only weekday dates appear in the mobile-friendly dropdown.
+    const previous=startField.value;
+    startField.replaceChildren(...config.start_dates.map(opt=>{
+      const el=document.createElement('option');el.value=opt.value;el.textContent=opt.label;return el;
+    }));
+    if(config.start_dates.some(x=>x.value===previous))startField.value=previous;
+    const banner=document.getElementById('dhanteras-banner');
+    banner.hidden=!config.promo_active;
+    document.querySelectorAll('.plan-price').forEach(el=>{
+      const days=el.dataset.plan;
+      el.textContent=`₹${Number(plans[days]).toLocaleString('en-IN')}`;
+    });
+    document.getElementById('dhanteras-savings').hidden=!config.promo_active;
+    updateChoices();
+  }
+  async function refreshCheckoutConfig(){
+    if(currentRef) return;
+    try{
+      const response=await fetch('/api/checkout-config',{cache:'no-store',credentials:'same-origin'});
+      if(!response.ok) return;
+      const config=await response.json();
+      applyCheckoutConfig(config);
+    }catch(e){ /* Server still verifies the correct price when placing an order. */ }
+  }
   function updateChoices(){
     form.querySelectorAll('.plan-card').forEach(e=>e.classList.toggle('is-selected',e.querySelector('input').checked));
     form.querySelectorAll('.slot-card').forEach(e=>e.classList.toggle('is-selected',e.querySelector('input').checked));
     const days=Number(form.elements.plan_days.value);
     document.getElementById('summary-plan').textContent=`${days} delivery days`;
-    document.getElementById('summary-price').textContent=`₹${plans[days].toLocaleString('en-IN')}`;
+    document.getElementById('summary-price').textContent=`₹${Number(plans[days]).toLocaleString('en-IN')}`;
+    document.getElementById('summary-regular-price').textContent=`₹${Number(checkoutConfig.regular_plans[days]).toLocaleString('en-IN')}`;
     document.getElementById('summary-slot').textContent=slots[form.elements.delivery_slot.value];
   }
   form.addEventListener('change',updateChoices);updateChoices();
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshCheckoutConfig();});
+  window.addEventListener('focus',refreshCheckoutConfig);
+  window.setInterval(refreshCheckoutConfig,60000);
+  refreshCheckoutConfig();
   const error=document.getElementById('form-error');
   const success=document.getElementById('form-success');
   function showError(message){error.textContent=message;error.hidden=false;error.scrollIntoView({block:'nearest',behavior:'smooth'});}
@@ -59,7 +92,7 @@
     success.scrollIntoView({block:'center',behavior:'smooth'});
   }
   function freezeForm(){
-    form.querySelectorAll('fieldset input, .invisible-field').forEach(el=>{el.disabled=true;});
+    form.querySelectorAll('fieldset input, fieldset select, .invisible-field').forEach(el=>{el.disabled=true;});
     submit.disabled=true;submit.textContent='UPI payment details below';
   }
   async function showPayment(ref){
@@ -87,10 +120,12 @@
   form.addEventListener('submit',async event=>{
     event.preventDefault();error.hidden=true;success.hidden=true;
     if(currentRef){qrBox.hidden=false;qrBox.scrollIntoView({block:'start',behavior:'smooth'});return;}
+    // Refresh again at submission time so an open page can't silently keep yesterday's price.
+    await refreshCheckoutConfig();
     if(!form.reportValidity())return;
     const date=startField.value;
-    if(!date||date<minStart||[0,6].includes(new Date(date+'T12:00:00').getDay())){
-      showError('Choose a weekday starting '+minStart+' or later.');return;
+    if(!date||date<minStart||!checkoutConfig.start_dates.some(x=>x.value===date)){
+      showError('Please select a Monday–Friday date from the list.');return;
     }
     const data={name:form.elements.name.value.trim(),phone:form.elements.phone.value.trim(),tower:form.elements.tower.value.trim(),flat:form.elements.flat.value.trim(),plan_days:Number(form.elements.plan_days.value),delivery_slot:form.elements.delivery_slot.value,start_date:date,website:form.elements.website.value};
     if(!/^[6-9]\d{9}$/.test(data.phone)){showError('Enter a valid 10-digit Indian mobile number.');return;}
