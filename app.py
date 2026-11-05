@@ -14,6 +14,7 @@ from urllib.parse import urlencode
 import qrcode
 
 import requests
+from telegram_alerts import send_order_alert, discover_groups, bot_ready
 from zoneinfo import ZoneInfo
 
 from flask import (
@@ -229,7 +230,10 @@ def mark_paid(order, payment_id):
                WHERE order_ref=? AND (razorpay_payment_id IS NULL OR razorpay_payment_id=?)""",
             (payment_id, timestamp, timestamp, order["order_ref"], payment_id)
         )
-    return cur.rowcount == 1
+    changed = cur.rowcount == 1
+    if changed and order.get("payment_status") != "paid":
+        send_order_alert("paid", dict(order), start_date_override=order.get("start_date"))
+    return changed
 
 
 def find_order(ref=None, razorpay_order_id=None):
@@ -322,6 +326,7 @@ def create_order():
             plan_days,price,delivery_slot,start_date,status,payment_status,updated_at,razorpay_order_id)
             VALUES (:order_ref,:created_at,:name,:phone,:tower,:flat,:plan_days,:price,
             :delivery_slot,:start_date,:status,:payment_status,:updated_at,:razorpay_order_id)""", order)
+    send_order_alert("new", order)
     return jsonify(reference=ref, razorpay_order_id=rzp_order_id,
                    key_id=RAZORPAY_KEY_ID, amount=order["price"]*100,
                    currency="INR", name=name, phone=phone)
@@ -374,6 +379,7 @@ def create_upi_order():
             price,delivery_slot,start_date,status,payment_status,updated_at,payment_method)
             VALUES (:order_ref,:created_at,:name,:phone,:tower,:flat,:plan_days,:price,
             :delivery_slot,:start_date,'payment_pending','unpaid',:updated_at,'upi_qr')""", validated)
+    send_order_alert("new", validated)
     return jsonify(reference=order_ref, amount=validated["price"],
                    payee="GREENRISE BUZZ PRIVATE LIMITED", status="payment_pending"), 201
 
@@ -461,6 +467,10 @@ def claim_upi_payment(order_ref):
                        upi_submitted_at=COALESCE(upi_submitted_at, ?), updated_at=?
                        WHERE order_ref=? AND payment_status!='paid'""",
                     (timestamp, timestamp, order_ref))
+    if row["payment_status"] != "pending_verification":
+        latest = find_order(ref=order_ref)
+        if latest:
+            send_order_alert("payment_reported", latest)
     return jsonify(reference=order_ref, status="pending_verification",
                    message="Payment reported. Staff will confirm after checking the actual PhonePe credit.")
 
@@ -491,6 +501,10 @@ def submit_upi_reference(order_ref):
                          now_ist().isoformat(timespec="seconds"), order_ref))
         except sqlite3.IntegrityError:
             return jsonify(error="This transaction reference is already linked to another order. Contact PureFruit."), 409
+    if row["payment_status"] != "pending_verification":
+        latest = find_order(ref=order_ref)
+        if latest:
+            send_order_alert("payment_reported", latest)
     return jsonify(reference=order_ref, status="pending_verification",
                    message="Payment details submitted. Your subscription starts only after PureFruit verifies bank credit.")
 
@@ -539,6 +553,7 @@ def staff_confirm_upi(order_ref):
     except sqlite3.IntegrityError:
         flash("That PhonePe UTR was already used for another order. Do not confirm twice.", "error")
         return redirect(url_for("staff_dashboard"))
+    send_order_alert("paid", {**current, "start_date": start_date}, start_date_override=start_date)
     flash(f"UPI bank credit verified for {order_ref}. Subscription confirmed. Start date: {start_date}.", "success")
     return redirect(url_for("staff_dashboard"))
 
@@ -570,6 +585,10 @@ def staff_review_upi(order_ref):
         message = {"not_received": "Payment not received — moved to follow-up.",
                    "check_later": "Payment marked Check Later — still unverified.",
                    "recheck": "Order returned to awaiting verification."}[action]
+        if action in ("not_received", "check_later"):
+            latest = find_order(ref=order_ref)
+            if latest:
+                send_order_alert(action, latest)
         flash(f"{order_ref}: {message}", "success")
     return redirect(url_for("staff_dashboard"))
 
@@ -650,6 +669,26 @@ def staff_login():
         else:
             flash("Incorrect password.", "error")
     return render_template("login.html", csrf=csrf_token())
+
+
+@app.get("/staff/telegram/setup")
+@staff_only
+def telegram_setup():
+    """Find private group chat IDs without revealing the bot token to a browser."""
+    groups, error = discover_groups()
+    return render_template("telegram_setup.html", csrf=csrf_token(),
+                           groups=groups, error=error, enabled=bot_ready())
+
+
+@app.post("/staff/telegram/test")
+@staff_only
+def telegram_test():
+    require_csrf()
+    if send_order_alert("test", {"order_ref": "SETUP"}):
+        flash("Telegram test message sent. Check your private group.", "success")
+    else:
+        flash("Telegram test was not delivered. Check bot token, chat ID, and group permissions in Railway.", "error")
+    return redirect(url_for("telegram_setup"))
 
 
 @app.post("/staff/logout")
