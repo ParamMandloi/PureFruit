@@ -150,3 +150,21 @@ h1{font:700 clamp(48px,6vw,80px)/1.02 Georgia,'Times New Roman',serif;letter-spa
   .hero-art { flex-basis:185px; height:185px; min-height:185px; max-height:185px; }
   .hero-juice > img { height:173px; max-height:173px; }
 }
+
+/* Manual UPI checkout — scoped styles, no changes to hero layout */
+[hidden] { display: none !important; }
+.upi-checkout { background:#fafaf9; border:1px solid #dededb; border-radius:16px; padding:18px; margin-top:20px; text-align:center; max-width:100%; }
+.upi-checkout h3 { font-size:21px; margin:0 0 8px; }
+.upi-due { font-size:34px; font-weight:750; color:#222; margin:4px 0 12px; }
+.upi-qr-image { max-width:100%; width:290px; height:auto; max-height:475px; object-fit:contain; background:#fff; display:block; margin:0 auto 10px; }
+.upi-checkout p { font-size:13px; color:#585858; line-height:1.6; }
+.upi-ref-form { display:grid; gap:10px; margin-top:18px; text-align:left; }
+.upi-ref-form label { font-weight:600; font-size:13px; }
+.upi-ref-form input, .upi-confirm-form input { border:1px solid #c9c9c9; padding:12px; border-radius:8px; min-width:0; max-width:100%; font-size:15px; }
+.upi-ref-form button { width:100%; }
+.upi-staff-row { display:flex; gap:20px; justify-content:space-between; align-items:start; border-top:1px solid #dedede; padding:15px 0; font-size:13px; }
+.upi-confirm-form { display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:end; min-width:300px; }
+.upi-confirm-form label { display:grid; gap:3px; font-size:12px; }
+.upi-confirm-form button, .upi-verify-check { grid-column:1/-1; }
+.upi-verify-check { display:flex !important; flex-direction:row; align-items:center; gap:8px; }
+@media(max-width:700px) { .upi-staff-row { display:block; } .upi-confirm-form { min-width:0; grid-template-columns:1fr; margin-top:14px; } }
