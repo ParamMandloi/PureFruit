@@ -48,7 +48,7 @@
     </section>
 
     <section class="wrap order-section" id="order" aria-labelledby="order-heading">
-      <div class="section-heading"><h2 id="order-heading">ORDER YOUR SUBSCRIPTION</h2><span>Pay via UPI QR</span></div>
+      <div class="section-heading"><h2 id="order-heading">ORDER YOUR SUBSCRIPTION</h2><span>UPI instant checkout</span></div>
       <div class="order-grid">
         <form id="order-form" class="order-panel" novalidate>
           <fieldset class="field-group plan-group">
@@ -82,23 +82,23 @@
           </fieldset>
           <input class="invisible-field" name="website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
           <div id="form-error" class="form-error" role="alert" hidden></div>
-          <button class="button button-dark button-submit" type="submit" id="submit-order">Place order &amp; show UPI QR <span aria-hidden="true">↗</span></button>
+          <button class="button button-dark button-submit" type="submit" id="submit-order">Place order &amp; show amount-filled QR <span aria-hidden="true">↗</span></button>
           <p class="after-submit">Your order will remain pending until we verify the actual payment in PhonePe Business.</p>
           <div id="form-success" class="form-success" role="status" hidden></div>
           <section class="upi-checkout" id="upi-checkout" hidden aria-live="polite">
             <h3>Pay for your subscription</h3>
             <div class="upi-due" id="upi-due">₹599</div>
-            <img src="{{ url_for('static', filename='phonepe-qr.jpg', v='upi-1') }}" alt="Official GreenRise Buzz Private Limited PhonePe UPI QR code" class="upi-qr-image" width="743" height="1280">
-            <p><strong>Payee: GREENRISE BUZZ PRIVATE LIMITED</strong></p>
-            <p class="hint">Scan with any supported UPI app. On the same phone, save the QR image and use your payment app’s scan-from-gallery option if available. Check the payee and amount before paying.</p>
-            <a class="gray-link" href="{{ url_for('static', filename='phonepe-qr.jpg', v='upi-1') }}" download="PureFruit-PhonePe-QR.jpg">Save QR image</a>
-            <p class="hint">After paying, enter the transaction reference from your UPI app. <strong>Submitting it does not confirm payment.</strong></p>
-            <div id="upi-ref-form" class="upi-ref-form">
-              <label for="upi-reference">UPI transaction reference / UTR</label>
-              <input id="upi-reference" name="upi_reference" minlength="10" maxlength="40" placeholder="Reference from your payment app" autocomplete="off">
-              <button class="button button-dark" id="upi-ref-submit" type="button">Submit payment reference</button>
-            </div>
-            <p id="upi-ref-feedback" role="status" class="hint"></p>
+            <p class="upi-order-ref" id="upi-order-ref"></p>
+            <img id="upi-qr-image" alt="UPI QR with the selected PureFruit order amount prefilled" class="upi-dynamic-qr" width="280" height="280" hidden>
+            <p class="hint">Scan this QR using a UPI app. Confirm that the payee is <strong>GREENRISE BUZZ PRIVATE LIMITED</strong> and the amount matches your plan before authorizing payment.</p>
+            <a id="upi-pay-app" class="button button-dark upi-app-button" href="#" hidden>Pay using UPI App <span aria-hidden="true">↗</span></a>
+            <a id="upi-save-qr" class="gray-link" href="#" download="PureFruit-UPI-Payment.png">Download payment QR</a>
+            <button id="upi-paid-claim" class="button button-outline upi-completed-button" type="button">I've completed payment</button>
+            <p id="upi-payment-feedback" role="status" class="hint"></p>
+            <details class="upi-fallback"><summary>QR not working? Use original PhonePe QR</summary>
+              <p class="hint">This QR does not prefill the amount. Enter the exact plan amount manually. Staff must still verify the real bank credit.</p>
+              <img src="{{ url_for('static', filename='phonepe-qr.jpg', v='upi-1') }}" alt="Original GreenRise Buzz PhonePe merchant QR" class="upi-original-qr" width="743" height="1280">
+            </details>
           </section>
         </form>
 
@@ -119,6 +119,6 @@
   </main>
 
   <footer class="footer"><div class="wrap footer-inner"><div><strong class="footer-brand">PureFruit</strong><span>Naturally Fresh.</span></div><div>Real fruit. Real people. A healthier tomorrow.</div><div>© PureFruit · <a href="https://www.purefruit.in">purefruit.in</a></div></div></footer>
-  <script src="{{ url_for('static', filename='app.js', v='upi-1') }}" defer></script>
+  <script src="{{ url_for('static', filename='app.js', v='upi-2') }}" defer></script>
 </body>
 </html>

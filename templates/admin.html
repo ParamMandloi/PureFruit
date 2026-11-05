@@ -19,15 +19,15 @@
 
     <section class="staff-card" aria-labelledby="upi-review-heading">
       <div class="staff-heading"><h2 id="upi-review-heading">UPI payments awaiting verification</h2></div>
-      <p class="staff-legend">Check each credit in PhonePe Business. Match the receiving account, amount and transaction reference. Customer screenshots alone are not proof.</p>
+      <p class="staff-legend">Customers no longer need to enter a UTR. Verify the incoming bank credit in PhonePe Business, match amount and payer, and record the actual bank transaction reference here. Check carefully when multiple orders have the same amount. Do not rely on customer confirmation alone.</p>
       {% set pending_upi = orders|selectattr('payment_method','equalto','upi_qr')|selectattr('payment_status','equalto','pending_verification')|list %}
       {% for order in pending_upi %}
       <div class="upi-staff-row">
-        <div><strong>{{ order.order_ref }}</strong> · {{ order.name }}<br><span class="muted">{{ order.tower }} / {{ order.flat }} · {{ order.phone }}</span><br>Amount <strong>₹{{ '{:,}'.format(order.price) }}</strong> · UTR <strong>{{ order.upi_reference }}</strong></div>
+        <div><strong>{{ order.order_ref }}</strong> · {{ order.name }}<br><span class="muted">{{ order.tower }} / {{ order.flat }} · {{ order.phone }}</span><br>Amount <strong>₹{{ '{:,}'.format(order.price) }}</strong> · Bank UTR <strong>{{ order.upi_reference or 'Awaiting staff verification' }}</strong></div>
         <form method="post" class="upi-confirm-form" action="{{ url_for('staff_confirm_upi', order_ref=order.order_ref) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf }}">
-          <label>Bank-confirmed UTR<input type="text" name="confirmed_utr" minlength="10" maxlength="40" autocomplete="off" required placeholder="Enter the matching UTR"></label>
-          <label>Bank-confirmed amount (₹)<input type="number" min="1" max="100000" name="verified_amount" required placeholder="{{ order.price }}"></label>
+          <label>Actual PhonePe bank UTR (staff only)<input type="text" name="confirmed_utr" minlength="10" maxlength="40" pattern="[A-Za-z0-9-]{10,40}" autocomplete="off" required placeholder="Copy UTR from PhonePe Business" value="{{ order.upi_reference or '' }}"></label>
+          <label>Bank-confirmed amount (₹)<input type="number" min="1" max="100000" name="verified_amount" required value="{{ order.price }}"></label>
           <label class="upi-verify-check"><input type="checkbox" name="bank_credit_checked" value="yes" required> I checked the actual credit in PhonePe Business</label>
           <button class="small-button" type="submit">Confirm verified payment</button>
         </form>
