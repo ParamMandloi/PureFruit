@@ -7,7 +7,7 @@
   <meta name="description" content="PureFruit: naturally fresh 300 ml juice delivered at L&T Serene County. Order your fixed weekday subscription and pay using PhonePe UPI QR.">
   <meta name="csrf-token" content="{{ csrf }}">
   <title>PureFruit · Naturally Fresh</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='bottle-layout-3') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='dhanteras-2026-2') }}">
 </head>
 <body data-preview="false" data-payments-ready="{{ 'true' if razorpay_ready else 'false' }}">
   <header class="topbar wrap">
@@ -49,14 +49,18 @@
 
     <section class="wrap order-section" id="order" aria-labelledby="order-heading">
       <div class="section-heading"><h2 id="order-heading">ORDER YOUR SUBSCRIPTION</h2><span>UPI instant checkout</span></div>
+      <div id="dhanteras-banner" class="dhanteras-banner" {% if not checkout.promo_active %}hidden{% endif %}>
+        <strong>DHANTERAS OFFER · 25% OFF</strong>
+        <span>Only on Friday, 6 November 2026 (India time). Prices below are discounted today.</span>
+      </div>
       <div class="order-grid">
         <form id="order-form" class="order-panel" novalidate>
           <fieldset class="field-group plan-group">
             <legend><span class="step-number">01</span> Choose your plan</legend>
             <div class="plan-options">
-              <label class="plan-card is-selected"><input name="plan_days" type="radio" value="5" checked required><span class="plan-title">5 days</span><span class="plan-caption">1 week</span><strong>₹599</strong><span class="choose-mark" aria-hidden="true">✓</span></label>
-              <label class="plan-card"><input name="plan_days" type="radio" value="10"><span class="plan-title">10 days</span><span class="plan-caption">2 weeks</span><strong>₹1,099</strong><span class="choose-mark" aria-hidden="true">✓</span></label>
-              <label class="plan-card"><input name="plan_days" type="radio" value="20"><span class="plan-title">20 days</span><span class="plan-caption">4 weeks</span><strong>₹1,999</strong><span class="choose-mark" aria-hidden="true">✓</span></label>
+              <label class="plan-card is-selected"><input name="plan_days" type="radio" value="5" checked required><span class="plan-title">5 days</span><span class="plan-caption">1 week</span><strong class="plan-price" data-plan="5">₹{{ checkout.plans['5'] | int }}</strong><span class="choose-mark" aria-hidden="true">✓</span></label>
+              <label class="plan-card"><input name="plan_days" type="radio" value="10"><span class="plan-title">10 days</span><span class="plan-caption">2 weeks</span><strong class="plan-price" data-plan="10">₹{{ checkout.plans['10'] | int }}</strong><span class="choose-mark" aria-hidden="true">✓</span></label>
+              <label class="plan-card"><input name="plan_days" type="radio" value="20"><span class="plan-title">20 days</span><span class="plan-caption">4 weeks</span><strong class="plan-price" data-plan="20">₹{{ checkout.plans['20'] | int }}</strong><span class="choose-mark" aria-hidden="true">✓</span></label>
             </div>
           </fieldset>
 
@@ -76,7 +80,13 @@
               <label class="full">Mobile number<input type="tel" name="phone" autocomplete="tel-national" inputmode="numeric" maxlength="14" placeholder="10-digit mobile number" required></label>
               <label>Tower / block<input type="text" name="tower" maxlength="50" placeholder="e.g. Tower A" required></label>
               <label>Flat number<input type="text" name="flat" maxlength="30" placeholder="e.g. 1204" required></label>
-              <label class="full">Preferred start date<input type="date" name="start_date" min="{{ min_start }}" value="{{ min_start }}" required></label>
+              <label class="full">Preferred start date
+                <select name="start_date" required aria-label="Select a Monday to Friday delivery start date">
+                  {% for option in checkout.start_dates %}
+                    <option value="{{ option.value }}">{{ option.label }}</option>
+                  {% endfor %}
+                </select>
+              </label>
             </div>
             <p class="hint">Delivery within L&T Serene County only. Monday to Friday, excluding weekends.</p>
           </fieldset>
@@ -105,7 +115,11 @@
         <aside class="summary-panel" aria-label="Order summary">
           <div class="summary-label">YOUR SUBSCRIPTION</div>
           <div class="summary-plan" id="summary-plan">5 delivery days</div>
-          <div class="summary-price" id="summary-price">₹599</div>
+          <div class="summary-price" id="summary-price">₹{{ checkout.plans['5'] | int }}</div>
+          <div class="dhanteras-savings" id="dhanteras-savings" {% if not checkout.promo_active %}hidden{% endif %}>
+            <span id="summary-regular-price">₹599</span>
+            <strong>25% OFF · Dhanteras only</strong>
+          </div>
           <div class="summary-line"><span>Bottle size</span><strong>300 ml</strong></div>
           <div class="summary-line"><span>Delivery days</span><strong>Mon – Fri</strong></div>
           <div class="summary-line"><span>Slot</span><strong id="summary-slot">8 – 9 AM</strong></div>
@@ -119,6 +133,7 @@
   </main>
 
   <footer class="footer"><div class="wrap footer-inner"><div><strong class="footer-brand">PureFruit</strong><span>Naturally Fresh.</span></div><div>Real fruit. Real people. A healthier tomorrow.</div><div>© PureFruit · <a href="https://www.purefruit.in">purefruit.in</a></div></div></footer>
-  <script src="{{ url_for('static', filename='app.js', v='upi-2') }}" defer></script>
+  <script id="checkout-config" type="application/json">{{ checkout | tojson }}</script>
+  <script src="{{ url_for('static', filename='app.js', v='dhanteras-2026-2') }}" defer></script>
 </body>
 </html>
