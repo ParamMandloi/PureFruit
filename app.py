@@ -46,23 +46,32 @@ UPI_PAYEE_NAME = os.getenv("UPI_PAYEE_NAME", "GREENRISE BUZZ PRIVATE LIMITED").s
 UPI_PAYEE_MCC = os.getenv("UPI_PAYEE_MCC", "0000").strip()
 LAUNCH_DATE = date(2026, 11, 6)
 PLANS = {5: 599, 10: 1099, 20: 1999}  # Regular rupee prices
+# Offer begins on 5 November in India time, and ends just as 7 November begins.
+# All checkout prices use the server clock. Existing orders retain their stored price.
+PROMO_START_IST = datetime(2026, 11, 5, 16, 0, tzinfo=IST)
+PROMO_END_EXCLUSIVE_IST = datetime(2026, 11, 7, 0, 0, tzinfo=IST)
 DHANTERAS_DATE = date(2026, 11, 6)
 DHANTERAS_PRICES = {days: (regular * 75) // 100 for days, regular in PLANS.items()}
 
 
-def is_dhanteras_day(on_date=None):
-    """The offer is determined by the SERVER's India date, never the customer's device."""
-    return (on_date or now_ist().date()) == DHANTERAS_DATE
+def promo_active(at=None):
+    """Server-side 25% discount eligibility; exclusive end 7 Nov 00:00 IST."""
+    point = at or now_ist()
+    if point.tzinfo is None:
+        raise ValueError("Promotion check must use a timezone-aware datetime")
+    point = point.astimezone(IST)
+    return PROMO_START_IST <= point < PROMO_END_EXCLUSIVE_IST
 
 
-def price_for_plan(days, on_date=None):
-    """Lock each order's exact rupee amount when it is created."""
-    return DHANTERAS_PRICES[days] if is_dhanteras_day(on_date) else PLANS[days]
+def price_for_plan(days, at=None):
+    """Lock the order amount at creation. Prices are always whole INR rupees."""
+    return DHANTERAS_PRICES[days] if promo_active(at) else PLANS[days]
 
 
 def checkout_config():
-    """Current prices and selectable weekdays; midnight changes need no redeployment."""
-    today = now_ist().date()
+    """Fresh server-side pricing and available weekdays; auto-reverts 7 Nov IST."""
+    pricing_time = now_ist()
+    today = pricing_time.date()
     first = next_available_day()
     options = []
     day = first
@@ -71,10 +80,11 @@ def checkout_config():
             options.append({"value": day.isoformat(), "label": day.strftime('%a, %d %b %Y')})
         day += timedelta(days=1)
     return {
-        "plans": {str(d): price_for_plan(d, today) for d in PLANS},
+        "plans": {str(d): price_for_plan(d, pricing_time) for d in PLANS},
         "regular_plans": {str(d): price for d, price in PLANS.items()},
-        "promo_active": is_dhanteras_day(today),
+        "promo_active": promo_active(pricing_time),
         "promo_date": DHANTERAS_DATE.isoformat(),
+        "promo_ends_at": PROMO_END_EXCLUSIVE_IST.isoformat(),
         "server_date": today.isoformat(),
         "min_start": first.isoformat(),
         "start_dates": options,
@@ -123,6 +133,14 @@ def setup_db():
             con.execute("ALTER TABLE orders ADD COLUMN upi_verified_amount INTEGER")
         if "payment_method" not in cols:
             con.execute("ALTER TABLE orders ADD COLUMN payment_method TEXT NOT NULL DEFAULT 'razorpay'")
+        # Track staff review outcomes separately from payment_status; customer
+        # reports, 'not received' and 'check later' must never activate delivery.
+        if "upi_review_status" not in cols:
+            con.execute("ALTER TABLE orders ADD COLUMN upi_review_status TEXT NOT NULL DEFAULT 'awaiting'")
+        if "upi_review_note" not in cols:
+            con.execute("ALTER TABLE orders ADD COLUMN upi_review_note TEXT NOT NULL DEFAULT ''")
+        if "upi_reviewed_at" not in cols:
+            con.execute("ALTER TABLE orders ADD COLUMN upi_reviewed_at TEXT")
         con.execute("CREATE INDEX IF NOT EXISTS orders_start_date_idx ON orders(start_date)")
         con.execute("CREATE UNIQUE INDEX IF NOT EXISTS orders_razorpay_order_idx ON orders(razorpay_order_id)")
         con.execute("CREATE UNIQUE INDEX IF NOT EXISTS orders_razorpay_payment_idx ON orders(razorpay_payment_id)")
@@ -508,12 +526,13 @@ def staff_confirm_upi(order_ref):
         with get_db() as con:
             cur = con.execute("""UPDATE orders SET payment_status='paid', status='confirmed',
                          paid_at=?, upi_verified_at=?, upi_verified_by='staff',
-                         upi_verified_amount=?, start_date=?, updated_at=?, upi_reference=?
+                         upi_verified_amount=?, start_date=?, updated_at=?, upi_reference=?,
+                         upi_review_status='verified', upi_reviewed_at=?, upi_review_note='Bank credit verified'
                          WHERE order_ref=? AND payment_method='upi_qr'
                          AND payment_status='pending_verification' AND status!='cancelled'
                          AND (upi_reference IS NULL OR upi_reference=?)""",
                       (timestamp, timestamp, current["price"], start_date, timestamp,
-                       confirmed_utr, order_ref, confirmed_utr))
+                       confirmed_utr, timestamp, order_ref, confirmed_utr))
             if cur.rowcount != 1:
                 flash("The order changed; refresh and check before confirming.", "error")
                 return redirect(url_for("staff_dashboard"))
@@ -522,6 +541,38 @@ def staff_confirm_upi(order_ref):
         return redirect(url_for("staff_dashboard"))
     flash(f"UPI bank credit verified for {order_ref}. Subscription confirmed. Start date: {start_date}.", "success")
     return redirect(url_for("staff_dashboard"))
+
+@app.post("/staff/upi/<order_ref>/review")
+@staff_only
+def staff_review_upi(order_ref):
+    """Staff triage: no credit / check later / return to verification queue.
+
+    Do not modify payment_status or order status. None of these actions are
+    proof of payment, and they never cause delivery activation.
+    """
+    require_csrf()
+    action = request.form.get("review_action", "")
+    actions = {"not_received", "check_later", "recheck"}
+    if action not in actions:
+        abort(400, description="Unknown payment review action")
+    note = clean_text(request.form.get("review_note", ""), 250)
+    stamp = now_ist().isoformat(timespec="seconds")
+    with get_db() as con:
+        updated = con.execute("""UPDATE orders
+            SET upi_review_status=?, upi_review_note=?, upi_reviewed_at=?, updated_at=?
+            WHERE order_ref=? AND payment_method='upi_qr'
+              AND payment_status='pending_verification' AND status!='cancelled'""",
+            ("awaiting" if action == "recheck" else action,
+             note, stamp, stamp, order_ref))
+    if updated.rowcount != 1:
+        flash("This order can no longer be reviewed as an unpaid UPI order.", "error")
+    else:
+        message = {"not_received": "Payment not received — moved to follow-up.",
+                   "check_later": "Payment marked Check Later — still unverified.",
+                   "recheck": "Order returned to awaiting verification."}[action]
+        flash(f"{order_ref}: {message}", "success")
+    return redirect(url_for("staff_dashboard"))
+
 
 @app.post("/api/orders/<order_ref>/verify")
 def verify_checkout(order_ref):
@@ -637,7 +688,8 @@ def staff_dashboard():
         "confirmed": sum(r["status"] in ("confirmed", "completed") for r in stats_orders),
         "paid": sum(r["payment_status"] == "paid" for r in stats_orders),
         "booked_value": sum(r["price"] for r in stats_orders if r["payment_status"] == "paid"),
-        "upi_to_verify": sum(r.get("payment_method") == "upi_qr" and r["payment_status"] == "pending_verification" for r in stats_orders),
+        "upi_to_verify": sum(r.get("payment_method") == "upi_qr" and r["payment_status"] == "pending_verification" and r.get("upi_review_status", "awaiting") == "awaiting" for r in stats_orders),
+        "upi_follow_up": sum(r.get("payment_method") == "upi_qr" and r["payment_status"] == "pending_verification" and r.get("upi_review_status") in ("not_received", "check_later") for r in stats_orders),
     }
     selected_date = safe_date(request.args.get("delivery_date"))
     delivery_orders = []
@@ -706,7 +758,9 @@ def export_orders():
             ("payment_method", "Payment method"), ("upi_reference", "Customer UPI reference"),
             ("upi_submitted_at", "UPI submitted at"), ("upi_verified_at", "UPI verified at"),
             ("upi_verified_amount", "UPI verified amount INR"),
-            ("paid_at", "Paid at IST"), ("notes", "Notes")]
+            ("paid_at", "Paid at IST"), ("upi_review_status", "Staff review"),
+            ("upi_review_note", "Staff review note"), ("upi_reviewed_at", "Staff reviewed at IST"),
+            ("notes", "Notes")]
     return csv_response(all_orders(), "purefruit-orders.csv", cols)
 
 
