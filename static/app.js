@@ -3,7 +3,7 @@
   const form=document.getElementById('order-form');
   if(!form) return;
   // Prices are always supplied by the India-time server.
-  // Refreshing the config handles the 6 Nov offer and automatic 7 Nov expiry.
+  // Refreshing the config handles the 5–6 Nov offer and automatic 7 Nov 00:00 IST expiry.
   let checkoutConfig=JSON.parse(document.getElementById('checkout-config').textContent);
   let plans=checkoutConfig.plans;
   const slots={morning:'8 – 9 AM',afternoon:'4 – 5 PM'};
