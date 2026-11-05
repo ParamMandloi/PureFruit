@@ -151,7 +151,8 @@ def staff_only(fn):
 
 
 def next_available_day():
-    candidate = max(now_ist().date(), LAUNCH_DATE)
+    """First start date is the next Monday-Friday after the booking day (IST)."""
+    candidate = max(now_ist().date() + timedelta(days=1), LAUNCH_DATE)
     while candidate.weekday() >= 5:
         candidate += timedelta(days=1)
     return candidate
