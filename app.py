@@ -45,7 +45,40 @@ UPI_PAYEE_ADDRESS = os.getenv("UPI_PAYEE_ADDRESS", "9619140077-gsb@ibl").strip()
 UPI_PAYEE_NAME = os.getenv("UPI_PAYEE_NAME", "GREENRISE BUZZ PRIVATE LIMITED").strip()
 UPI_PAYEE_MCC = os.getenv("UPI_PAYEE_MCC", "0000").strip()
 LAUNCH_DATE = date(2026, 11, 6)
-PLANS = {5: 599, 10: 1099, 20: 1999}
+PLANS = {5: 599, 10: 1099, 20: 1999}  # Regular rupee prices
+DHANTERAS_DATE = date(2026, 11, 6)
+DHANTERAS_PRICES = {days: (regular * 75) // 100 for days, regular in PLANS.items()}
+
+
+def is_dhanteras_day(on_date=None):
+    """The offer is determined by the SERVER's India date, never the customer's device."""
+    return (on_date or now_ist().date()) == DHANTERAS_DATE
+
+
+def price_for_plan(days, on_date=None):
+    """Lock each order's exact rupee amount when it is created."""
+    return DHANTERAS_PRICES[days] if is_dhanteras_day(on_date) else PLANS[days]
+
+
+def checkout_config():
+    """Current prices and selectable weekdays; midnight changes need no redeployment."""
+    today = now_ist().date()
+    first = next_available_day()
+    options = []
+    day = first
+    while len(options) < 40 and day <= today + timedelta(days=120):
+        if day.weekday() < 5:
+            options.append({"value": day.isoformat(), "label": day.strftime('%a, %d %b %Y')})
+        day += timedelta(days=1)
+    return {
+        "plans": {str(d): price_for_plan(d, today) for d in PLANS},
+        "regular_plans": {str(d): price for d, price in PLANS.items()},
+        "promo_active": is_dhanteras_day(today),
+        "promo_date": DHANTERAS_DATE.isoformat(),
+        "server_date": today.isoformat(),
+        "min_start": first.isoformat(),
+        "start_dates": options,
+    }
 SLOTS = {"morning": "Morning (8–9 AM)", "afternoon": "Afternoon (4–5 PM)"}
 FRUITS = {0: "Mosambi", 1: "Pineapple", 2: "ABC", 3: "Orange", 4: "Watermelon"}
 STATUSES = ("payment_pending", "confirmed", "completed", "cancelled", "whatsapp_opened")
@@ -203,7 +236,15 @@ def index():
     return render_template(
         "index.html", csrf=csrf_token(), min_start=next_available_day().isoformat(),
         razorpay_ready=PAYMENTS_READY, razorpay_key_id=RAZORPAY_KEY_ID, payment_mode=PAYMENT_MODE,
+        checkout=checkout_config(),
     )
+
+
+@app.get("/api/checkout-config")
+def public_checkout_config():
+    response = jsonify(checkout_config())
+    response.headers["Cache-Control"] = "no-store, max-age=0"
+    return response
 
 
 @app.post("/api/orders")
@@ -241,19 +282,19 @@ def create_order():
     ref = "PF-" + now_ist().strftime("%y%m%d") + "-" + secrets.token_hex(6).upper()
     timestamp = now_ist().isoformat(timespec="seconds")
     order = dict(order_ref=ref, created_at=timestamp, name=name, phone=phone,
-                 tower=tower, flat=flat, plan_days=days, price=PLANS[days],
+                 tower=tower, flat=flat, plan_days=days, price=price_for_plan(days),
                  delivery_slot=slot, start_date=start.isoformat(),
                  status="payment_pending", payment_status="unpaid", updated_at=timestamp)
     try:
         rp = razorpay_api("POST", "/orders", json={
-            "amount": PLANS[days] * 100, "currency": "INR", "receipt": ref,
+            "amount": order["price"] * 100, "currency": "INR", "receipt": ref,
             "notes": {"subscription_days": str(days)}
         })
     except RuntimeError as exc:
         return jsonify(error=str(exc)), 502
     rzp_order_id = rp.get("id")
     if (not isinstance(rzp_order_id, str) or not rzp_order_id.startswith("order_") or
-            rp.get("amount") != PLANS[days]*100 or rp.get("currency") != "INR"):
+            rp.get("amount") != order["price"]*100 or rp.get("currency") != "INR"):
         app.logger.error("Unexpected Razorpay order API response")
         return jsonify(error="Could not start payment. Please try again."), 502
     order["razorpay_order_id"] = rzp_order_id
@@ -263,7 +304,7 @@ def create_order():
             VALUES (:order_ref,:created_at,:name,:phone,:tower,:flat,:plan_days,:price,
             :delivery_slot,:start_date,:status,:payment_status,:updated_at,:razorpay_order_id)""", order)
     return jsonify(reference=ref, razorpay_order_id=rzp_order_id,
-                   key_id=RAZORPAY_KEY_ID, amount=PLANS[days]*100,
+                   key_id=RAZORPAY_KEY_ID, amount=order["price"]*100,
                    currency="INR", name=name, phone=phone)
 
 
@@ -289,7 +330,7 @@ def validate_customer_order(data):
             start.weekday() < 5):
         return None
     return {"name": name, "phone": phone, "tower": tower, "flat": flat,
-            "plan_days": days, "price": PLANS[days], "delivery_slot": slot,
+            "plan_days": days, "price": price_for_plan(days), "delivery_slot": slot,
             "start_date": start.isoformat()}
 
 
@@ -325,7 +366,9 @@ def create_upi_uri(order, mode="01"):
     assume a UPI-app return means money arrived. The original merchant QR is
     still available as a fallback if an app rejects amount-prefilled links.
     """
-    if order.get("payment_method") != "upi_qr" or int(order["price"]) not in PLANS.values():
+    days = int(order["plan_days"])
+    if (order.get("payment_method") != "upi_qr" or days not in PLANS or
+            int(order["price"]) not in (PLANS[days], DHANTERAS_PRICES[days])):
         raise ValueError("Invalid UPI order")
     if not re.fullmatch(r"PF-[A-Za-z0-9-]{8,40}", order["order_ref"]):
         raise ValueError("Invalid order reference")
