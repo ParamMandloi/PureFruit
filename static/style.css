@@ -168,3 +168,13 @@ h1{font:700 clamp(48px,6vw,80px)/1.02 Georgia,'Times New Roman',serif;letter-spa
 .upi-confirm-form button, .upi-verify-check { grid-column:1/-1; }
 .upi-verify-check { display:flex !important; flex-direction:row; align-items:center; gap:8px; }
 @media(max-width:700px) { .upi-staff-row { display:block; } .upi-confirm-form { min-width:0; grid-template-columns:1fr; margin-top:14px; } }
+
+/* PureFruit UPI Express checkout: contained QR, compact controls */
+.upi-dynamic-qr { display:block; width:min(280px,100%); height:auto; aspect-ratio:1; object-fit:contain; margin:12px auto; padding:8px; background:white; border:1px solid #ecebea; border-radius:8px; }
+.upi-order-ref { font-size:11px !important; letter-spacing:.2px; margin:5px auto 8px; overflow-wrap:anywhere; }
+.upi-app-button { width:100%; max-width:350px; margin:10px auto 5px; text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center; }
+.upi-completed-button { display:block; width:100%; max-width:350px; margin:15px auto 4px; background:white; color:#303030; border:1px solid #aaa; border-radius:9px; padding:13px; min-height:46px; font-weight:700; cursor:pointer; }
+.upi-completed-button:disabled { opacity:.55; cursor:default; }
+.upi-fallback { text-align:left; max-width:380px; margin:18px auto 0; padding-top:12px; border-top:1px solid #dedede; font-size:12px; }
+.upi-fallback summary { cursor:pointer; color:#666; }
+.upi-original-qr { display:block; width:230px; max-width:100%; height:auto; margin:14px auto; }

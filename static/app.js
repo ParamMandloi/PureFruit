@@ -32,10 +32,46 @@
     return result;
   }
   let currentRef=null;
+  let paymentIntent=null;
   const qrBox=document.getElementById('upi-checkout');
   const qrPrice=document.getElementById('upi-due');
-  const utrForm=document.getElementById('upi-ref-form');
-  const utrFeedback=document.getElementById('upi-ref-feedback');
+  const qrImage=document.getElementById('upi-qr-image');
+  const payApp=document.getElementById('upi-pay-app');
+  const saveQr=document.getElementById('upi-save-qr');
+  const orderLabel=document.getElementById('upi-order-ref');
+  const claimButton=document.getElementById('upi-paid-claim');
+  const feedback=document.getElementById('upi-payment-feedback');
+  const supportsIntent=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+  function freezeForm(){
+    form.querySelectorAll('fieldset input, .invisible-field').forEach(el=>{el.disabled=true;});
+    submit.disabled=true;submit.textContent='UPI payment details below';
+  }
+  async function showPayment(ref){
+    const response=await fetch(`/api/upi/orders/${encodeURIComponent(ref)}/payment`,{credentials:'same-origin',cache:'no-store'});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.error||'Unable to load UPI payment details.');
+    currentRef=ref;
+    orderLabel.textContent=`Order reference: ${ref}`;
+    if(data.status==='paid'){
+      qrBox.hidden=false;qrImage.hidden=true;payApp.hidden=true;saveQr.hidden=true;claimButton.hidden=true;
+      feedback.textContent='Payment already verified. Your order is confirmed.';
+      freezeForm();return;
+    }
+    paymentIntent=data.intent;
+    qrPrice.textContent=`₹${Number(data.amount).toLocaleString('en-IN')}`;
+    // Per-order dynamic QR is rendered by our server, never by a third party.
+    qrImage.src=data.qr;qrImage.hidden=false;
+    saveQr.href=data.qr;saveQr.hidden=false;
+    payApp.href=paymentIntent;payApp.hidden=!supportsIntent;
+    qrBox.hidden=false;
+    freezeForm();
+    feedback.textContent=data.status==='pending_verification'
+      ? 'We received your payment report. Staff will verify the actual PhonePe bank credit.'
+      : 'After paying, return here and tap “I’ve completed payment”. No UTR entry required.';
+    if(data.status==='pending_verification'){
+      claimButton.disabled=true;claimButton.textContent='Payment reported';
+    }
+  }
   form.addEventListener('submit',async event=>{
     event.preventDefault();error.hidden=true;success.hidden=true;
     if(currentRef){qrBox.hidden=false;qrBox.scrollIntoView({block:'start',behavior:'smooth'});return;}
@@ -50,43 +86,28 @@
     try{
       const result=await jsonPost('/api/upi/orders',data);
       currentRef=result.reference;
-      try{sessionStorage.setItem('purefruit_upi_pending',JSON.stringify({ref:currentRef,amount:result.amount}));}catch(e){}
-      qrPrice.textContent=`₹${Number(result.amount).toLocaleString('en-IN')}`;
-      qrBox.hidden=false;
-      showSuccess(`Order ${currentRef} saved, pending bank verification. Pay the exact amount displayed below.`);
-      // No changes to customer details once an order reference exists.
-      form.querySelectorAll('fieldset input, .invisible-field').forEach(el=>{el.disabled=true;});
-      submit.textContent='UPI QR displayed';
+      try{sessionStorage.setItem('purefruit_upi_pending',currentRef);}catch(e){}
+      await showPayment(currentRef);
+      showSuccess(`Order ${currentRef} saved. Pay ₹${result.amount} using the QR or UPI button below.`);
       qrBox.scrollIntoView({block:'start',behavior:'smooth'});
-    }catch(err){showError(err.message);submit.disabled=false;submit.textContent='Place order & show UPI QR ↗';}
+    }catch(err){showError(err.message);if(!currentRef){submit.disabled=false;submit.textContent='Place order & show amount-filled QR ↗';}}
   });
-  // Recover the QR if a mobile browser reloads after switching to a UPI app.
+  // Recover a pending payment when the customer returns from the UPI app.
   try{
-    const pending=JSON.parse(sessionStorage.getItem('purefruit_upi_pending')||'null');
-    if(pending && /^PF-[A-Z0-9-]{8,40}$/.test(pending.ref) && [599,1099,1999].includes(Number(pending.amount))){
-      currentRef=pending.ref;qrPrice.textContent=`₹${Number(pending.amount).toLocaleString('en-IN')}`;
-      qrBox.hidden=false;
-      submit.textContent='UPI QR displayed';
-      showSuccess(`Your pending order ${currentRef} is saved. Complete payment and submit its reference below.`);
+    const pending=sessionStorage.getItem('purefruit_upi_pending');
+    if(pending&&/^PF-[A-Za-z0-9-]{8,40}$/.test(pending)){
+      showPayment(pending).catch(err=>{feedback.textContent=err.message;});
     }
   }catch(e){}
-  utrForm.querySelector('input').addEventListener('keydown', e=>{
-    if(e.key==='Enter') { e.preventDefault(); document.getElementById('upi-ref-submit').click(); }
-  });
-  document.getElementById('upi-ref-submit').addEventListener('click',async event=>{
-    event.preventDefault();
+  claimButton.addEventListener('click',async ()=>{
     if(!currentRef)return;
-    const utr=utrForm.elements.upi_reference.value.trim();
-    if(!/^[a-z0-9-]{10,40}$/i.test(utr)){
-      utrFeedback.textContent='Enter a valid reference shown in your payment app.';return;
-    }
-    const button=document.getElementById('upi-ref-submit');
-    button.disabled=true;button.textContent='Submitting…';
+    claimButton.disabled=true;claimButton.textContent='Reporting payment…';
     try{
-      await jsonPost(`/api/upi/orders/${encodeURIComponent(currentRef)}/submit`,{upi_reference:utr});
-      utrFeedback.textContent=`Reference received for ${currentRef}. Await verification by PureFruit before delivery begins.`;
-      utrForm.querySelector('input').disabled=true;
-      button.textContent='Reference submitted';
-    }catch(err){utrFeedback.textContent=err.message;button.disabled=false;button.textContent='Submit payment reference';}
+      await jsonPost(`/api/upi/orders/${encodeURIComponent(currentRef)}/claim`,{});
+      feedback.textContent=`Payment reported for ${currentRef}. PureFruit staff will verify the actual bank credit before activating your subscription.`;
+      claimButton.textContent='Payment reported';
+      try{sessionStorage.removeItem('purefruit_upi_pending');}catch(e){}
+    }catch(err){feedback.textContent=err.message;claimButton.disabled=false;claimButton.textContent="I've completed payment";}
   });
+  // Never assume returning from the payment app means success.
 })();
