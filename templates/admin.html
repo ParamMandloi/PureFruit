@@ -8,15 +8,32 @@
   </div></header>
   <main class="wrap staff-main">
     <h1>Order overview</h1>
-    <p class="staff-sub">Orders are confirmed automatically after Razorpay verifies captured payment. Pending orders are not on the delivery list.</p>
+    <p class="staff-sub">UPI orders need a real PhonePe bank-credit check before confirmation. Razorpay-verified historical payments stay unchanged. Unpaid orders never appear on the delivery list.</p>
     {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="alert">{{ message }}</div>{% endfor %}{% endwith %}
     <section class="stat-grid" aria-label="Order statistics">
       <div class="stat"><small>Total checkouts</small><strong>{{ stats.requests }}</strong></div>
-      <div class="stat"><small>Confirmed subscriptions</small><strong>{{ stats.confirmed }}</strong></div>
+      <div class="stat"><small>UPI to verify</small><strong>{{ stats.upi_to_verify }}</strong></div>
       <div class="stat"><small>Verified paid</small><strong>{{ stats.paid }}</strong></div>
-      <div class="stat"><small>Captured value</small><strong>₹{{ '{:,}'.format(stats.booked_value) }}</strong></div>
+      <div class="stat"><small>Verified value</small><strong>₹{{ '{:,}'.format(stats.booked_value) }}</strong></div>
     </section>
 
+    <section class="staff-card" aria-labelledby="upi-review-heading">
+      <div class="staff-heading"><h2 id="upi-review-heading">UPI payments awaiting verification</h2></div>
+      <p class="staff-legend">Check each credit in PhonePe Business. Match the receiving account, amount and transaction reference. Customer screenshots alone are not proof.</p>
+      {% set pending_upi = orders|selectattr('payment_method','equalto','upi_qr')|selectattr('payment_status','equalto','pending_verification')|list %}
+      {% for order in pending_upi %}
+      <div class="upi-staff-row">
+        <div><strong>{{ order.order_ref }}</strong> · {{ order.name }}<br><span class="muted">{{ order.tower }} / {{ order.flat }} · {{ order.phone }}</span><br>Amount <strong>₹{{ '{:,}'.format(order.price) }}</strong> · UTR <strong>{{ order.upi_reference }}</strong></div>
+        <form method="post" class="upi-confirm-form" action="{{ url_for('staff_confirm_upi', order_ref=order.order_ref) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf }}">
+          <label>Bank-confirmed UTR<input type="text" name="confirmed_utr" minlength="10" maxlength="40" autocomplete="off" required placeholder="Enter the matching UTR"></label>
+          <label>Bank-confirmed amount (₹)<input type="number" min="1" max="100000" name="verified_amount" required placeholder="{{ order.price }}"></label>
+          <label class="upi-verify-check"><input type="checkbox" name="bank_credit_checked" value="yes" required> I checked the actual credit in PhonePe Business</label>
+          <button class="small-button" type="submit">Confirm verified payment</button>
+        </form>
+      </div>
+      {% else %}<p class="empty">No UPI payments currently awaiting verification.</p>{% endfor %}
+    </section>
     <section class="staff-card" aria-labelledby="delivery-heading">
       <div class="staff-heading"><h2 id="delivery-heading">Daily delivery list</h2><a class="gray-link" href="{{ url_for('export_deliveries', delivery_date=selected_date.isoformat()) }}">Download CSV</a></div>
       <form method="get" action="{{ url_for('staff_dashboard') }}" class="staff-filter"><label for="delivery_date" class="sr-only">Delivery date</label><input id="delivery_date" name="delivery_date" type="date" value="{{ selected_date.isoformat() }}"><button class="small-button" type="submit">Show deliveries</button></form>
@@ -43,12 +60,14 @@
           <td><strong>{{ order.name }}</strong><span class="muted">{{ order.order_ref }}</span><br>{{ order.phone }}<br>{{ order.tower }} · {{ order.flat }}<br><span class="muted">{{ order.created_at[0:16]|replace('T',' ') }} IST</span></td>
           <td>{{ slots[order.delivery_slot] }}<br><span class="muted">Start {{ order.start_date }}</span></td>
           <td><strong>{{ order.plan_days }} days</strong>₹{{ '{:,}'.format(order.price) }}</td>
-          <td><span class="tag {{ 'positive' if order.status in ('confirmed','completed') else 'pending' }}">{{ order.status|replace('_', ' ')|title }}</span><br><span class="tag {{ 'positive' if order.payment_status == 'paid' else 'pending' }}">{{ order.payment_status|title }}</span><br>{% if order.razorpay_payment_id %}<span class="muted" style="font-size:10px">{{ order.razorpay_payment_id }}</span>{% endif %}</td>
+          <td><span class="tag {{ 'positive' if order.status in ('confirmed','completed') else 'pending' }}">{{ order.status|replace('_', ' ')|title }}</span><br><span class="tag {{ 'positive' if order.payment_status == 'paid' else 'pending' }}">{{ order.payment_status|title }}</span><br><br><span class="muted">{{ (order.payment_method or 'unknown')|replace('_',' ')|title }}</span>
+             {% if order.upi_reference %}<br><span class="muted" style="font-size:10px">UTR: {{ order.upi_reference }}</span>{% endif %}
+             {% if order.razorpay_payment_id %}<br><span class="muted" style="font-size:10px">{{ order.razorpay_payment_id }}</span>{% endif %}</td>
           <td>
             <form class="staff-edit" action="{{ url_for('update_order', order_ref=order.order_ref) }}" method="post">
               <input type="hidden" name="csrf_token" value="{{ csrf }}">
               <select name="status" aria-label="Order status">{% for s in statuses %}<option value="{{ s }}" {% if order.status==s %}selected{% endif %}>{{ s|replace('_',' ')|title }}</option>{% endfor %}</select>
-              <span class="tag {{ 'positive' if order.payment_status == 'paid' else 'pending' }}" title="Only Razorpay can mark orders paid">{{ order.payment_status|title }}</span>
+              <span class="tag {{ 'positive' if order.payment_status == 'paid' else 'pending' }}" title="Payment is verified either by Razorpay or after staff checks PhonePe credit">{{ order.payment_status|title }}</span>
               <input name="notes" value="{{ order.notes }}" maxlength="500" placeholder="Staff notes" aria-label="Staff notes"><button type="submit">Save</button>
             </form>
           </td>

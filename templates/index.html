@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f7f7f5">
-  <meta name="description" content="PureFruit: naturally fresh 300 ml juice delivered at L&T Serene County. Order and pay online for a fixed weekday subscription.">
+  <meta name="description" content="PureFruit: naturally fresh 300 ml juice delivered at L&T Serene County. Order your fixed weekday subscription and pay using PhonePe UPI QR.">
   <meta name="csrf-token" content="{{ csrf }}">
   <title>PureFruit · Naturally Fresh</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='bottle-layout-3') }}">
@@ -48,7 +48,7 @@
     </section>
 
     <section class="wrap order-section" id="order" aria-labelledby="order-heading">
-      <div class="section-heading"><h2 id="order-heading">ORDER YOUR SUBSCRIPTION</h2><span>Secure online checkout</span></div>
+      <div class="section-heading"><h2 id="order-heading">ORDER YOUR SUBSCRIPTION</h2><span>Pay via UPI QR</span></div>
       <div class="order-grid">
         <form id="order-form" class="order-panel" novalidate>
           <fieldset class="field-group plan-group">
@@ -82,10 +82,24 @@
           </fieldset>
           <input class="invisible-field" name="website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
           <div id="form-error" class="form-error" role="alert" hidden></div>
-          <button class="button button-dark button-submit" type="submit" id="submit-order">Pay securely <span aria-hidden="true">↗</span></button>
-          <p class="after-submit">Secure payment powered by Razorpay. Your subscription is confirmed only after successful payment verification. Payment methods depend on your Razorpay account.</p>
-          {% if not razorpay_ready %}<p class="form-error">Online checkout is not yet enabled. Please try later.</p>{% endif %}
+          <button class="button button-dark button-submit" type="submit" id="submit-order">Place order &amp; show UPI QR <span aria-hidden="true">↗</span></button>
+          <p class="after-submit">Your order will remain pending until we verify the actual payment in PhonePe Business.</p>
           <div id="form-success" class="form-success" role="status" hidden></div>
+          <section class="upi-checkout" id="upi-checkout" hidden aria-live="polite">
+            <h3>Pay for your subscription</h3>
+            <div class="upi-due" id="upi-due">₹599</div>
+            <img src="{{ url_for('static', filename='phonepe-qr.jpg', v='upi-1') }}" alt="Official GreenRise Buzz Private Limited PhonePe UPI QR code" class="upi-qr-image" width="743" height="1280">
+            <p><strong>Payee: GREENRISE BUZZ PRIVATE LIMITED</strong></p>
+            <p class="hint">Scan with any supported UPI app. On the same phone, save the QR image and use your payment app’s scan-from-gallery option if available. Check the payee and amount before paying.</p>
+            <a class="gray-link" href="{{ url_for('static', filename='phonepe-qr.jpg', v='upi-1') }}" download="PureFruit-PhonePe-QR.jpg">Save QR image</a>
+            <p class="hint">After paying, enter the transaction reference from your UPI app. <strong>Submitting it does not confirm payment.</strong></p>
+            <div id="upi-ref-form" class="upi-ref-form">
+              <label for="upi-reference">UPI transaction reference / UTR</label>
+              <input id="upi-reference" name="upi_reference" minlength="10" maxlength="40" placeholder="Reference from your payment app" autocomplete="off">
+              <button class="button button-dark" id="upi-ref-submit" type="button">Submit payment reference</button>
+            </div>
+            <p id="upi-ref-feedback" role="status" class="hint"></p>
+          </section>
         </form>
 
         <aside class="summary-panel" aria-label="Order summary">
@@ -105,7 +119,6 @@
   </main>
 
   <footer class="footer"><div class="wrap footer-inner"><div><strong class="footer-brand">PureFruit</strong><span>Naturally Fresh.</span></div><div>Real fruit. Real people. A healthier tomorrow.</div><div>© PureFruit · <a href="https://www.purefruit.in">purefruit.in</a></div></div></footer>
-  <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
-  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='app.js', v='upi-1') }}" defer></script>
 </body>
 </html>
