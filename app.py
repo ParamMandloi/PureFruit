@@ -1,4 +1,4 @@
-"""PureFruit: direct online payments and staff order management on Railway."""
+"""PureFruit: manual PhonePe UPI QR payments and staff order management on Railway."""
 
 import csv
 import hmac
@@ -35,6 +35,7 @@ RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", "").strip()
 RAZORPAY_WEBHOOK_SECRET = os.getenv("RAZORPAY_WEBHOOK_SECRET", "").strip()
 RAZORPAY_API = "https://api.razorpay.com/v1"
 PAYMENTS_READY = bool(RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET and RAZORPAY_WEBHOOK_SECRET)
+PAYMENT_MODE = os.getenv("PAYMENT_MODE", "upi_qr").strip().lower()
 LAUNCH_DATE = date(2026, 11, 6)
 PLANS = {5: 599, 10: 1099, 20: 1999}
 SLOTS = {"morning": "Morning (8–9 AM)", "afternoon": "Afternoon (4–5 PM)"}
@@ -74,12 +75,17 @@ def setup_db():
         )""")
         # Add columns in place; retain existing orders from the WhatsApp-era website.
         cols = {col[1] for col in con.execute("PRAGMA table_info(orders)")}
-        for name in ("razorpay_order_id", "razorpay_payment_id", "paid_at"):
+        for name in ("razorpay_order_id", "razorpay_payment_id", "paid_at", "upi_reference", "upi_submitted_at", "upi_verified_at", "upi_verified_by"):
             if name not in cols:
                 con.execute(f"ALTER TABLE orders ADD COLUMN {name} TEXT")
+        if "upi_verified_amount" not in cols:
+            con.execute("ALTER TABLE orders ADD COLUMN upi_verified_amount INTEGER")
+        if "payment_method" not in cols:
+            con.execute("ALTER TABLE orders ADD COLUMN payment_method TEXT NOT NULL DEFAULT 'razorpay'")
         con.execute("CREATE INDEX IF NOT EXISTS orders_start_date_idx ON orders(start_date)")
         con.execute("CREATE UNIQUE INDEX IF NOT EXISTS orders_razorpay_order_idx ON orders(razorpay_order_id)")
         con.execute("CREATE UNIQUE INDEX IF NOT EXISTS orders_razorpay_payment_idx ON orders(razorpay_payment_id)")
+        con.execute("CREATE UNIQUE INDEX IF NOT EXISTS orders_upi_reference_idx ON orders(upi_reference)")
 
 
 def csrf_token():
@@ -188,13 +194,15 @@ def security_headers(response):
 def index():
     return render_template(
         "index.html", csrf=csrf_token(), min_start=next_available_day().isoformat(),
-        razorpay_ready=PAYMENTS_READY, razorpay_key_id=RAZORPAY_KEY_ID,
+        razorpay_ready=PAYMENTS_READY, razorpay_key_id=RAZORPAY_KEY_ID, payment_mode=PAYMENT_MODE,
     )
 
 
 @app.post("/api/orders")
 def create_order():
     require_csrf()
+    if PAYMENT_MODE != "razorpay":
+        return jsonify(error="Razorpay checkout is not enabled. Please use UPI QR checkout."), 503
     if not request.is_json:
         return jsonify(error="Please submit the form again."), 400
     data = request.get_json(silent=True) or {}
@@ -250,6 +258,123 @@ def create_order():
                    key_id=RAZORPAY_KEY_ID, amount=PLANS[days]*100,
                    currency="INR", name=name, phone=phone)
 
+
+
+
+def validate_customer_order(data):
+    """Validate orders server-side; price is selected from trusted plan table."""
+    name = clean_text(data.get("name"), 70)
+    phone = re.sub(r"\D", "", str(data.get("phone", "")))
+    tower = clean_text(data.get("tower"), 50)
+    flat = clean_text(data.get("flat"), 30)
+    slot = data.get("delivery_slot")
+    try:
+        days = int(data.get("plan_days", 0))
+        start = date.fromisoformat(str(data.get("start_date", "")))
+    except (ValueError, TypeError):
+        return None
+    if len(phone) == 12 and phone.startswith("91"):
+        phone = phone[2:]
+    if not (2 <= len(name) <= 70 and len(phone) == 10 and phone[0] in "6789" and
+            tower and flat and days in PLANS and slot in SLOTS and
+            next_available_day() <= start <= now_ist().date() + timedelta(days=120) and
+            start.weekday() < 5):
+        return None
+    return {"name": name, "phone": phone, "tower": tower, "flat": flat,
+            "plan_days": days, "price": PLANS[days], "delivery_slot": slot,
+            "start_date": start.isoformat()}
+
+
+@app.post("/api/upi/orders")
+def create_upi_order():
+    require_csrf()
+    if PAYMENT_MODE != "upi_qr":
+        return jsonify(error="UPI QR checkout is not enabled."), 503
+    if not request.is_json:
+        return jsonify(error="Invalid order data."), 400
+    data = request.get_json(silent=True) or {}
+    if data.get("website"):
+        return jsonify(error="Invalid request."), 400
+    validated = validate_customer_order(data)
+    if not validated:
+        return jsonify(error="Check name, mobile, tower, flat, plan, slot and weekday start date."), 400
+    timestamp = now_ist().isoformat(timespec="seconds")
+    order_ref = "PF-" + now_ist().strftime("%y%m%d") + "-" + secrets.token_hex(6).upper()
+    validated.update(order_ref=order_ref, created_at=timestamp, updated_at=timestamp)
+    with get_db() as con:
+        con.execute("""INSERT INTO orders (order_ref,created_at,name,phone,tower,flat,plan_days,
+            price,delivery_slot,start_date,status,payment_status,updated_at,payment_method)
+            VALUES (:order_ref,:created_at,:name,:phone,:tower,:flat,:plan_days,:price,
+            :delivery_slot,:start_date,'payment_pending','unpaid',:updated_at,'upi_qr')""", validated)
+    return jsonify(reference=order_ref, amount=validated["price"],
+                   payee="GREENRISE BUZZ PRIVATE LIMITED", status="payment_pending"), 201
+
+
+@app.post("/api/upi/orders/<order_ref>/submit")
+def submit_upi_reference(order_ref):
+    require_csrf()
+    if PAYMENT_MODE != "upi_qr":
+        return jsonify(error="UPI QR checkout is not enabled."), 503
+    data = request.get_json(silent=True) or {}
+    # Validates a reference FORMAT, not whether money was actually received.
+    utr = str(data.get("upi_reference", "")).strip().upper()
+    if not re.fullmatch(r"[A-Z0-9-]{10,40}", utr):
+        return jsonify(error="Enter the 10–40 character UPI transaction reference from your payment app."), 400
+    with get_db() as con:
+        row = con.execute("SELECT payment_method,payment_status,upi_reference FROM orders WHERE order_ref=?", (order_ref,)).fetchone()
+        if not row or row["payment_method"] != "upi_qr":
+            return jsonify(error="UPI order not found."), 404
+        if row["payment_status"] == "paid":
+            return jsonify(error="This order is already paid."), 409
+        if row["upi_reference"] and row["upi_reference"] != utr:
+            return jsonify(error="A transaction reference was already submitted. Contact PureFruit to correct it."), 409
+        try:
+            con.execute("""UPDATE orders SET upi_reference=?, upi_submitted_at=COALESCE(upi_submitted_at, ?),
+                           payment_status='pending_verification',updated_at=?
+                           WHERE order_ref=? AND payment_status!='paid'""",
+                        (utr, now_ist().isoformat(timespec="seconds"),
+                         now_ist().isoformat(timespec="seconds"), order_ref))
+        except sqlite3.IntegrityError:
+            return jsonify(error="This transaction reference is already linked to another order. Contact PureFruit."), 409
+    return jsonify(reference=order_ref, status="pending_verification",
+                   message="Payment details submitted. Your subscription starts only after PureFruit verifies bank credit.")
+
+
+@app.post("/staff/upi/<order_ref>/confirm")
+@staff_only
+def staff_confirm_upi(order_ref):
+    require_csrf()
+    current = find_order(ref=order_ref)
+    if not current or current.get("payment_method") != "upi_qr":
+        abort(404)
+    if current["payment_status"] == "paid":
+        flash("This order is already marked paid; no duplicate confirmation was made.", "error")
+        return redirect(url_for("staff_dashboard"))
+    if current["status"] == "cancelled":
+        flash("Cancelled orders cannot be confirmed. Review the order first.", "error")
+        return redirect(url_for("staff_dashboard"))
+    confirmed_utr = str(request.form.get("confirmed_utr", "")).strip().upper()
+    verified_amount = str(request.form.get("verified_amount", "")).strip()
+    if (not current["upi_reference"] or not hmac.compare_digest(confirmed_utr, current["upi_reference"]) or
+            verified_amount != str(current["price"]) or request.form.get("bank_credit_checked") != "yes"):
+        flash("Not confirmed. Verify the actual PhonePe credit, exact amount and transaction reference first.", "error")
+        return redirect(url_for("staff_dashboard"))
+    timestamp = now_ist().isoformat(timespec="seconds")
+    old_start = date.fromisoformat(current["start_date"])
+    start_date = max(old_start, next_available_day()).isoformat()
+    with get_db() as con:
+        cur = con.execute("""UPDATE orders SET payment_status='paid', status='confirmed',
+                     paid_at=?, upi_verified_at=?, upi_verified_by='staff',
+                     upi_verified_amount=?,start_date=?,updated_at=?
+                     WHERE order_ref=? AND payment_method='upi_qr'
+                     AND payment_status!='paid' AND status!='cancelled' AND upi_reference=?""",
+                  (timestamp, timestamp, current["price"], start_date, timestamp,
+                   order_ref, confirmed_utr))
+        if cur.rowcount != 1:
+            flash("The order changed; refresh and check before confirming.", "error")
+            return redirect(url_for("staff_dashboard"))
+    flash(f"UPI bank credit verified for {order_ref}. Subscription confirmed. Start date: {start_date}.", "success")
+    return redirect(url_for("staff_dashboard"))
 
 @app.post("/api/orders/<order_ref>/verify")
 def verify_checkout(order_ref):
@@ -365,6 +490,7 @@ def staff_dashboard():
         "confirmed": sum(r["status"] in ("confirmed", "completed") for r in stats_orders),
         "paid": sum(r["payment_status"] == "paid" for r in stats_orders),
         "booked_value": sum(r["price"] for r in stats_orders if r["payment_status"] == "paid"),
+        "upi_to_verify": sum(r.get("payment_method") == "upi_qr" and r["payment_status"] == "pending_verification" for r in stats_orders),
     }
     selected_date = safe_date(request.args.get("delivery_date"))
     delivery_orders = []
@@ -391,7 +517,7 @@ def update_order(order_ref):
     if not current:
         abort(404)
     if current["payment_status"] != "paid" and status in ("confirmed", "completed"):
-        flash("Unpaid orders cannot be confirmed. Await verified Razorpay payment.", "error")
+        flash("Unpaid orders cannot be confirmed. Verify UPI bank credit or await Razorpay capture.", "error")
         return redirect(url_for("staff_dashboard"))
     with get_db() as con:
         cursor = con.execute("""UPDATE orders SET status=?, notes=?, updated_at=?
@@ -430,6 +556,9 @@ def export_orders():
             ("status", "Order status"), ("payment_status", "Payment"),
             ("razorpay_order_id", "Razorpay order ID"),
             ("razorpay_payment_id", "Razorpay payment ID"),
+            ("payment_method", "Payment method"), ("upi_reference", "Customer UPI reference"),
+            ("upi_submitted_at", "UPI submitted at"), ("upi_verified_at", "UPI verified at"),
+            ("upi_verified_amount", "UPI verified amount INR"),
             ("paid_at", "Paid at IST"), ("notes", "Notes")]
     return csv_response(all_orders(), "purefruit-orders.csv", cols)
 
