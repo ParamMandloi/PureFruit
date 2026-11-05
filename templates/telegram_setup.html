@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>PureFruit | Telegram Staff Alerts</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"></head>
+<body class="staff-body">
+<main class="login-wrap" style="max-width:650px">
+  <div class="staff-brand">PureFruit<small>PRIVATE OPERATIONS</small></div>
+  <h1>Telegram staff alerts</h1>
+  <p><a href="{{ url_for('staff_dashboard') }}">← Back to staff dashboard</a></p>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category,message in messages %}<div class="alert">{{ message }}</div>{% endfor %}
+  {% endwith %}
+  <p>1. Create a private Telegram group called <strong>PureFruit Operations</strong>.</p>
+  <p>2. Create your bot using Telegram's verified <strong>@BotFather</strong>. Add it to the private group and send <strong>/start</strong> in the group.</p>
+  <p>3. Save the private bot token in Railway as <code>TELEGRAM_BOT_TOKEN</code>, then redeploy.</p>
+  {% if error %}<p class="alert">{{ error }}</p>{% endif %}
+  <h2>Group IDs visible to your bot</h2>
+  {% if groups %}
+    <ul>{% for chat_id,title in groups %}<li><strong>{{ title }}</strong>: <code>{{ chat_id }}</code></li>{% endfor %}</ul>
+  {% else %}
+    <p>No groups found yet. Send a new command to your bot in the group, then refresh this page.</p>
+  {% endif %}
+  <p>4. Copy your group's numeric ID into Railway as <code>TELEGRAM_CHAT_ID</code> and redeploy. Leave the minus sign in the ID.</p>
+  <p>5. Send a test message:</p>
+  <form action="{{ url_for('telegram_test') }}" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <button class="button button-dark" type="submit" {% if not enabled %}disabled{% endif %}>Send Telegram test</button>
+  </form>
+  <p style="font-size:.85rem">The bot token is never displayed by this page. Only add trusted staff to the private group. Notifications are best-effort; the staff dashboard remains the source of truth.</p>
+</main>
+</body></html>
