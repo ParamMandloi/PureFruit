@@ -19,6 +19,16 @@
     .dhanteras-savings strong{font-size:11px;color:#3d3d3d}
     .fields select{width:100%;min-width:0;min-height:45px;border:1px solid #d2d2d0;border-radius:7px;background:#fff;padding:10px;color:#333;font:inherit}
     @media(max-width:620px){.dhanteras-banner{padding:12px;font-size:11px}}
+    /* Mobile payment shortcuts: keep the working site stylesheet unchanged. */
+    .upi-pay-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0 12px}
+    .upi-pay-choices .button{display:flex;justify-content:center;align-items:center;text-align:center;min-width:0;padding:13px 10px;font-size:14px;white-space:normal;line-height:1.35}
+    #upi-pay-app{grid-column:1/-1}
+    .upi-qr-details{margin:12px 0 18px;border:1px solid #ddd;border-radius:10px;overflow:hidden}
+    .upi-qr-details summary{cursor:pointer;list-style-position:inside;padding:13px 14px;font-size:14px;font-weight:600;color:#343434}
+    .upi-qr-contents{padding:0 12px 16px;text-align:center}
+    .upi-qr-contents .upi-dynamic-qr{display:block;max-width:min(280px,100%);height:auto;margin:8px auto 10px}
+    .upi-qr-contents .gray-link{display:inline-block;margin-top:5px;padding:9px 6px}
+    .upi-pay-choices[hidden],.upi-qr-details [hidden],.upi-qr-contents [hidden]{display:none!important}
   </style>
 </head>
 <body data-preview="false" data-payments-ready="{{ 'true' if razorpay_ready else 'false' }}">
@@ -104,17 +114,27 @@
           </fieldset>
           <input class="invisible-field" name="website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
           <div id="form-error" class="form-error" role="alert" hidden></div>
-          <button class="button button-dark button-submit" type="submit" id="submit-order">Place order &amp; show amount-filled QR <span aria-hidden="true">↗</span></button>
+          <button class="button button-dark button-submit" type="submit" id="submit-order">Place Order</button>
           <p class="after-submit">Your order will remain pending until we verify the actual payment in PhonePe Business.</p>
           <div id="form-success" class="form-success" role="status" hidden></div>
           <section class="upi-checkout" id="upi-checkout" hidden aria-live="polite">
             <h3>Pay for your subscription</h3>
             <div class="upi-due" id="upi-due">₹599</div>
             <p class="upi-order-ref" id="upi-order-ref"></p>
-            <img id="upi-qr-image" alt="UPI QR with the selected PureFruit order amount prefilled" class="upi-dynamic-qr" width="280" height="280" hidden>
-            <p class="hint">Scan this QR using a UPI app. Confirm that the payee is <strong>GREENRISE BUZZ PRIVATE LIMITED</strong> and the amount matches your plan before authorizing payment.</p>
-            <a id="upi-pay-app" class="button button-dark upi-app-button" href="#" hidden>Pay using UPI App <span aria-hidden="true">↗</span></a>
-            <a id="upi-save-qr" class="gray-link" href="#" download="PureFruit-UPI-Payment.png">Download payment QR</a>
+            <p id="upi-app-guidance" class="hint" hidden>Choose the app you use. The amount and recipient will be filled in. Return here after payment.</p>
+            <div id="upi-pay-choices" class="upi-pay-choices" hidden>
+              <a id="upi-pay-phonepe" class="button button-dark" href="#" hidden>Pay with PhonePe</a>
+              <a id="upi-pay-gpay" class="button button-dark" href="#" hidden>Pay with Google Pay</a>
+              <a id="upi-pay-app" class="button button-outline" href="#" hidden>Other UPI apps (Android)</a>
+            </div>
+            <details id="upi-qr-details" class="upi-qr-details" open>
+              <summary>Scan or save payment QR</summary>
+              <div class="upi-qr-contents">
+                <img id="upi-qr-image" alt="UPI QR with the selected PureFruit order amount prefilled" class="upi-dynamic-qr" width="280" height="280" hidden>
+                <p class="hint">Payee: <strong>GREENRISE BUZZ PRIVATE LIMITED</strong>. Check the amount before paying. On the same phone, save the QR and scan it from your UPI app's gallery, if supported.</p>
+                <a id="upi-save-qr" class="gray-link" href="#" download="PureFruit-UPI-Payment.png" hidden>Save payment QR</a>
+              </div>
+            </details>
             <button id="upi-paid-claim" class="button button-outline upi-completed-button" type="button">I've completed payment</button>
             <p id="upi-payment-feedback" role="status" class="hint"></p>
             <details class="upi-fallback"><summary>QR not working? Use original PhonePe QR</summary>
@@ -146,6 +166,6 @@
 
   <footer class="footer"><div class="wrap footer-inner"><div><strong class="footer-brand">PureFruit</strong><span>Naturally Fresh.</span></div><div>Real fruit. Real people. A healthier tomorrow.</div><div>© PureFruit · <a href="https://www.purefruit.in">purefruit.in</a></div></div></footer>
   <script id="checkout-config" type="application/json">{{ checkout | tojson }}</script>
-  <script src="{{ url_for('static', filename='app.js', v='dhanteras-2026-live') }}" defer></script>
+  <script src="{{ url_for('static', filename='app.js', v='return-home-telegram-drafts-1') }}" defer></script>
 </body>
 </html>
