@@ -18,7 +18,7 @@
     .dhanteras-savings span{text-decoration:line-through}
     .dhanteras-savings strong{font-size:11px;color:#3d3d3d}
     .fields select{width:100%;min-width:0;min-height:45px;border:1px solid #d2d2d0;border-radius:7px;background:#fff;padding:10px;color:#333;font:inherit}
-    @media(max-width:620px){.dhanteras-banner{padding:12px;font-size:11px}}
+    @media(max-width:620px){.dhanteras-banner{padding:12px;font-size:11px}.topbar .top-promise{display:none}}
     /* Mobile payment shortcuts: keep the working site stylesheet unchanged. */
     .upi-pay-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0 12px}
     .upi-pay-choices .button{display:flex;justify-content:center;align-items:center;text-align:center;min-width:0;padding:13px 10px;font-size:14px;white-space:normal;line-height:1.35}
@@ -34,7 +34,10 @@
 <body data-preview="false" data-payments-ready="{{ 'true' if razorpay_ready else 'false' }}">
   <header class="topbar wrap">
     <a href="#top" class="brand brand-logo" aria-label="PureFruit home"><img src="{{ url_for('static', filename='fruit/purefruit-logo.webp', v='visual-2') }}" alt="PureFruit — Naturally Fresh" width="920" height="360" decoding="async"></a>
-    <span class="top-promise">HEALTHIER<br>HAPPIER YOU</span>
+    <nav aria-label="Customer navigation" style="display:flex;align-items:center;gap:12px;margin-left:auto">
+      <a href="{{ url_for('my_orders') }}" style="color:#333;font-weight:600;font-size:13px;text-decoration:underline;text-underline-offset:4px">My Orders</a>
+      <span class="top-promise">HEALTHIER<br>HAPPIER YOU</span>
+    </nav>
   </header>
 
   <main id="top">
@@ -115,7 +118,7 @@
           <input class="invisible-field" name="website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
           <div id="form-error" class="form-error" role="alert" hidden></div>
           <button class="button button-dark button-submit" type="submit" id="submit-order">Place Order</button>
-          <p class="after-submit">Your order will remain pending until we verify the actual payment in PhonePe Business.</p>
+          <p class="after-submit">Your order will remain pending until we verify the actual payment in PhonePe Business. <a href="{{ url_for('my_orders') }}">View My Orders</a> to resume an unpaid order without placing another.</p>
           <div id="form-success" class="form-success" role="status" hidden></div>
           <section class="upi-checkout" id="upi-checkout" hidden aria-live="polite">
             <h3>Pay for your subscription</h3>
@@ -166,6 +169,6 @@
 
   <footer class="footer"><div class="wrap footer-inner"><div><strong class="footer-brand">PureFruit</strong><span>Naturally Fresh.</span></div><div>Real fruit. Real people. A healthier tomorrow.</div><div>© PureFruit · <a href="https://www.purefruit.in">purefruit.in</a></div></div></footer>
   <script id="checkout-config" type="application/json">{{ checkout | tojson }}</script>
-  <script src="{{ url_for('static', filename='app.js', v='return-home-telegram-drafts-1') }}" defer></script>
+  <script src="{{ url_for('static', filename='app.js', v='customer-history-1') }}" defer></script>
 </body>
 </html>

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#f7f7f5"><title>My Orders · PureFruit</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#282828;background:#f7f7f5}
+*{box-sizing:border-box}body{margin:0}main,header{max-width:820px;margin:auto;padding:19px 18px}
+header{display:flex;align-items:center;justify-content:space-between;gap:14px;border-bottom:1px solid #e2e2df}
+.brand{font-family:Georgia,serif;font-size:23px;font-weight:bold;letter-spacing:-.04em}
+a{color:#303030}h1{font-family:Georgia,serif;font-size:36px;line-height:1.15;font-weight:normal;margin:23px 0 9px}
+h2{font-size:17px;margin:0 0 13px}p{line-height:1.55}.muted{color:#666;font-size:13px}
+.card{background:#fff;border:1px solid #e4e4e0;border-radius:13px;padding:18px;margin:16px 0;box-shadow:0 2px 15px #00000005}
+.order-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.ref{font-weight:700;font-size:14px;word-break:break-word}small{color:#666}
+.tag{display:inline-block;background:#f1f1ef;padding:5px 10px;border-radius:99px;font-size:12px;font-weight:600}
+.paid{background:#e9f3eb;color:#225c35}.pending{background:#f8f1de;color:#755b12}
+.lines{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0;font-size:13px}
+.lines strong{display:block;font-size:15px;margin-top:4px}
+.btn{appearance:none;display:inline-block;background:#292929;color:#fff;border:none;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;padding:13px 19px;cursor:pointer}
+.btn.alt{background:#f4f4f2;color:#292929;border:1px solid #ccc}
+.recover{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+label{display:block;font-size:12px;font-weight:600}input{font:inherit;width:100%;min-height:44px;padding:10px;margin-top:6px;border:1px solid #ccc;border-radius:7px;background:#fff}
+.recover button{grid-column:1/-1}.alert{padding:12px 15px;background:#f5eedf;border-radius:7px;margin:12px 0}
+@media(max-width:530px){h1{font-size:31px}.lines{grid-template-columns:1fr 1fr}.recover{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><a class="brand" href="{{ url_for('index') }}" style="text-decoration:none">PureFruit</a><a href="{{ url_for('index') }}">Back to website</a></header>
+<main>
+  <h1>My Orders</h1>
+  <p class="muted">Orders placed or recovered on this device. Continue an unpaid payment without creating another order.</p>
+  {% with messages = get_flashed_messages(with_categories=true) %}{% for category,message in messages %}<div class="alert" role="alert">{{ message }}</div>{% endfor %}{% endwith %}
+  {% for order in orders %}
+  <article class="card">
+    <div class="order-top"><div><div class="ref">{{ order.order_ref }}</div><small>{{ order.created_at[0:16]|replace('T',' ') }} IST</small></div>
+    <div class="tag {{ 'paid' if order.payment_status == 'paid' else 'pending' }}">
+    {% if order.status == 'cancelled' %}Cancelled{% elif order.payment_status == 'paid' %}Payment verified{% elif order.payment_status == 'pending_verification' %}Payment under verification{% else %}Awaiting payment{% endif %}</div></div>
+    <div class="lines">
+      <div>Subscription<strong>{{ order.plan_days }} delivery days</strong></div>
+      <div>Original order amount<strong>₹{{ '{:,}'.format(order.price) }}</strong></div>
+      <div>Start date<strong>{{ order.start_date }}</strong></div>
+      <div>Delivery slot<strong>{{ '8–9 AM' if order.delivery_slot=='morning' else '4–5 PM' }}</strong></div>
+      <div>Delivery location<strong>{{ order.tower }} · Flat {{ order.flat }}</strong></div>
+      {% if order.days_left is not none %}<div>Remaining delivery days<strong>{{ order.days_left }}</strong></div>{% endif %}
+    </div>
+    {% if order.status == 'cancelled' %}<p class="muted">This order was cancelled. Please place a new order if needed.</p>
+    {% elif order.payment_status == 'paid' %}<p class="muted">Your payment is verified. Your delivery schedule is confirmed.</p>
+    {% elif order.payment_status == 'pending_verification' %}<p class="muted">We've received your payment notification. Our team is verifying the bank credit. Please do not pay again unless our team asks you to.</p>
+    {% elif order.payment_method == 'upi_qr' %}<a class="btn" href="{{ url_for('index', resume=order.order_ref) }}#order">Pay Now · ₹{{ '{:,}'.format(order.price) }}</a>
+    {% else %}<p class="muted">Contact PureFruit for payment support with this order reference.</p>{% endif %}
+  </article>
+  {% else %}<div class="card"><h2>No orders on this browser yet</h2><p class="muted">An existing order can be recovered below using its reference and registered mobile. Otherwise, place your first order.</p><a class="btn" href="{{ url_for('index') }}#order">Place Order</a></div>{% endfor %}
+  <section class="card" aria-labelledby="recover-heading">
+    <h2 id="recover-heading">Recover an older order</h2>
+    <p class="muted">If you have an order reference from PureFruit, link that specific order to this browser. For a complete history across devices, mobile OTP login will be needed in a future update.</p>
+    <form class="recover" method="post" action="{{ url_for('recover_customer_order') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <label>Order reference<input name="order_ref" required placeholder="PF-261106-..." maxlength="45" autocomplete="off"></label>
+      <label>Registered mobile number<input name="phone" required type="tel" inputmode="numeric" pattern="[0-9+ -]{10,16}" placeholder="10-digit mobile" maxlength="16"></label>
+      <button class="btn alt" type="submit">Find my order</button>
+    </form>
+  </section>
+  <p class="muted">For help, contact <a href="https://wa.me/918074062979" rel="noopener noreferrer">PureFruit on WhatsApp</a>. Never send payment OTPs or bank credentials.</p>
+</main>
+</body></html>

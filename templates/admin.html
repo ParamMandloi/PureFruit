@@ -18,6 +18,11 @@
   </div></header>
   <main class="wrap staff-main">
     <h1>Order overview</h1>
+    <nav style="display:flex;gap:12px;flex-wrap:wrap;margin:12px 0 18px" aria-label="Order views">
+      <a class="small-button secondary" href="{{ url_for('staff_dashboard', view='active') }}">Active orders</a>
+      <a class="small-button secondary" href="{{ url_for('staff_dashboard', view='archived') }}">Archived orders ({{ archived_count }})</a>
+      <a class="small-button secondary" href="{{ url_for('staff_dashboard', view='all') }}">All orders</a>
+    </nav>
     <p class="staff-sub">Use Payment Received, Payment Not Received, or Check Later after checking PhonePe Business. UPI orders need a real PhonePe bank-credit check before confirmation. Razorpay-verified historical payments stay unchanged. Unpaid orders never appear on the delivery list.</p>
     {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="alert">{{ message }}</div>{% endfor %}{% endwith %}
     <section class="stat-grid" aria-label="Order statistics">
@@ -119,7 +124,21 @@
               <span class="tag {{ 'positive' if order.payment_status == 'paid' else 'pending' }}" title="Payment is verified either by Razorpay or after staff checks PhonePe credit">{{ order.payment_status|title }}</span>
               <input name="notes" value="{{ order.notes }}" maxlength="500" placeholder="Staff notes" aria-label="Staff notes"><button type="submit">Save</button>
             </form>
-            {% if order.can_delete_test %}
+            {% if order.archived_at %}
+            <div class="muted" style="font-size:11px;margin-top:7px">Archived {{ order.archived_at[0:16]|replace('T',' ') }} IST</div>
+            <form method="post" action="{{ url_for('restore_order', order_ref=order.order_ref) }}" style="margin-top:7px">
+              <input type="hidden" name="csrf_token" value="{{ csrf }}">
+              <button class="small-button secondary" type="submit">Restore</button>
+            </form>
+            {% elif order.can_archive %}
+            <form method="post" action="{{ url_for('archive_order', order_ref=order.order_ref) }}"
+                  style="margin-top:9px" onsubmit="return confirm('Archive this order? It will be hidden from the active list, but retained in records.');">
+              <input type="hidden" name="csrf_token" value="{{ csrf }}">
+              <input type="hidden" name="reason" value="Staff archive">
+              <button class="small-button secondary" type="submit">Archive</button>
+            </form>
+            {% endif %}
+            {% if not order.archived_at and order.can_delete_test %}
             <form method="post" action="{{ url_for('delete_test_order', order_ref=order.order_ref) }}"
                   style="margin-top:9px" onsubmit="return confirm('PERMANENTLY DELETE this cancelled, unpaid TEST order?\n\n' + '{{ order.order_ref }}' + '\n\nOnly continue after verifying no payment was received. This cannot be undone.');">
               <input type="hidden" name="csrf_token" value="{{ csrf }}">
