@@ -50,6 +50,7 @@ def _describe(event, order, start_date_override=None):
     return "\n".join([
         "PureFruit | " + labels[event],
         "Order: " + _safe(order.get("order_ref")),
+        "Customer: " + _safe(order.get("name"), 70) + " | WhatsApp: " + _safe(order.get("phone"), 20),
         "Plan: " + _safe(order.get("plan_days"), 3) + " days | ₹" + _safe(order.get("price"), 12),
         "Location: " + _safe(order.get("tower"), 50) + " / Flat " + _safe(order.get("flat"), 20),
         "Delivery: " + slot + " | Start " + _safe(start, 15),
@@ -57,14 +58,56 @@ def _describe(event, order, start_date_override=None):
     ])
 
 
-def send_order_alert(event, order, start_date_override=None):
-    """Returns True only on Telegram acknowledgement. Failure does not affect orders."""
-    token, chat_id = _config()
-    if not token or not chat_id:
-        return False
-    message = _describe(event, order, start_date_override)
-    if not message:
-        return False
+
+def _customer_whatsapp_draft(event, order, start_date_override=None):
+    """Text to copy from the *private staff group* to the customer's WhatsApp.
+
+    This does NOT send WhatsApp messages or alter payment verification. It is
+    emitted only after the matching backend event has happened.
+    """
+    if event not in ("new", "payment_reported", "paid"):
+        return None
+    name = _safe(order.get("name"), 70).split(" ")[0] or "there"
+    ref = _safe(order.get("order_ref"), 50)
+    days = _safe(order.get("plan_days"), 3)
+    price = _safe(order.get("price"), 10)
+    tower = _safe(order.get("tower"), 50)
+    flat = _safe(order.get("flat"), 30)
+    start = _safe(start_date_override or order.get("start_date"), 15)
+    slot = {"morning": "8–9 AM", "afternoon": "4–5 PM"}.get(
+        order.get("delivery_slot"), _safe(order.get("delivery_slot"), 35))
+    if event == "new":
+        return (f"Hello {name},\n\n"
+                f"Thank you for choosing PureFruit. We've received your order "
+                f"request ({ref}) for {days} days, ₹{price}.\n\n"
+                "Your order is awaiting payment. Please complete it using the "
+                "UPI payment option shown on your order page. If you need help "
+                "or have already paid, please reply here.\n\n"
+                "PureFruit – Naturally Fresh")
+    if event == "payment_reported":
+        return (f"Hello {name},\n\n"
+                f"Thank you for informing us about your payment for PureFruit "
+                f"order {ref} (₹{price}).\n\n"
+                "Our team is checking the payment in our account. Your subscription "
+                "will be confirmed after verification, and we'll share the final "
+                "delivery start date and time slot.\n\n"
+                "PureFruit – Naturally Fresh")
+    return (f"Hello {name},\n\n"
+            "Your PureFruit payment has been verified and your subscription "
+            "is confirmed.\n\n"
+            f"Order: {ref}\n"
+            f"Plan: {days} delivery days\n"
+            f"Amount received: ₹{price}\n"
+            f"Start date: {start}\n"
+            f"Delivery slot: {slot}\n"
+            f"Address: {tower}, Flat {flat}, L&T Serene County\n"
+            "Delivery days: Monday to Friday\n"
+            "Bottle size: 300 ml\n\n"
+            "Thank you for choosing PureFruit.\n"
+            "PureFruit – Naturally Fresh")
+
+
+def _send_text(token, chat_id, message):
     try:
         response = requests.post(
             f"{API}/bot{token}/sendMessage",
@@ -76,9 +119,31 @@ def send_order_alert(event, order, start_date_override=None):
             return False
         return True
     except (requests.RequestException, ValueError) as err:
-        # Never log URLs or exception objects: requests errors may contain the bot token.
+        # Do not log exception text: it could contain a bot credential.
         LOG.warning("Telegram notification failed: %s", type(err).__name__)
         return False
+
+def send_order_alert(event, order, start_date_override=None):
+    """Send staff alert + copyable customer draft to private Telegram group.
+
+    For new/payment_reported/paid, the second Telegram message is standalone
+    WhatsApp-ready text for staff to copy. Payment state is never changed here.
+    """
+    token, chat_id = _config()
+    if not token or not chat_id:
+        return False
+    alert = _describe(event, order, start_date_override)
+    if not alert:
+        return False
+    delivered = _send_text(token, chat_id, alert)
+    if not delivered:
+        return False
+    customer_draft = _customer_whatsapp_draft(event, order, start_date_override)
+    if customer_draft:
+        # Separate Telegram message so staff can copy all text in one tap.
+        # Do NOT include order phone numbers in the customer-facing message.
+        delivered = _send_text(token, chat_id, customer_draft) and delivered
+    return delivered
 
 
 def discover_groups():
