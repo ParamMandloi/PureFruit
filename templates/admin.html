@@ -22,7 +22,7 @@
     {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="alert">{{ message }}</div>{% endfor %}{% endwith %}
     <section class="stat-grid" aria-label="Order statistics">
       <div class="stat"><small>Total checkouts</small><strong>{{ stats.requests }}</strong></div>
-      <div class="stat"><small>UPI to verify</small><strong>{{ stats.upi_to_verify }}</strong></div>
+      <div class="stat"><small>All unverified UPI orders</small><strong>{{ stats.upi_unverified }}</strong></div>
       <div class="stat"><small>Verified paid</small><strong>{{ stats.paid }}</strong></div>
       <div class="stat"><small>Verified value</small><strong>₹{{ '{:,}'.format(stats.booked_value) }}</strong></div>
     </section>
@@ -31,7 +31,10 @@
       <div class="upi-staff-row">
         <div class="upi-order-details"><strong>{{ order.order_ref }}</strong> · {{ order.name }}<br>
           <span class="muted">{{ order.tower }} / {{ order.flat }} · {{ order.phone }}</span><br>
+          <span class="muted">Placed {{ order.created_at[0:16]|replace('T',' ') }} IST · {{ order.plan_days }} days · {{ slots[order.delivery_slot] }} · Starts {{ order.start_date }}</span><br>
           Amount <strong>₹{{ '{:,}'.format(order.price) }}</strong> · UTR <strong>{{ order.upi_reference or 'Not yet available' }}</strong><br>
+          {% if order.payment_status == 'unpaid' %}<span class="tag pending">Customer has not reported payment</span>{% else %}<span class="tag pending">Customer reported payment — bank verification needed</span>{% endif %}
+          · <a class="gray-link" href="https://wa.me/91{{ order.phone }}" target="_blank" rel="noopener noreferrer">Contact customer on WhatsApp</a><br>
           {% if order.upi_review_status == 'not_received' %}<span class="tag pending">Payment not received</span>{% elif order.upi_review_status == 'check_later' %}<span class="tag pending">Check later</span>{% endif %}
           {% if order.upi_review_note %}<span class="muted"> · Staff note: {{ order.upi_review_note }}</span>{% endif %}
         </div>
@@ -59,17 +62,25 @@
         </div>
       </div>
     {% endmacro %}
+    <section class="staff-card" aria-label="All orders requiring payment attention" style="border:2px solid #555; padding:20px; margin-bottom:20px">
+      <h2 style="margin:0 0 8px">Payment attention required — {{ stats.upi_unverified }} order(s)</h2>
+      <p class="staff-legend">Every unpaid UPI checkout is shown below, whether or not the customer tapped “I've completed payment”. No unverified order is included in the delivery list. Use <strong>Payment Received</strong> only after matching an actual credit and UTR in PhonePe Business.</p>
+      <p class="staff-legend"><a href="#upi-unpaid-heading">Awaiting payment ({{ stats.upi_unpaid }})</a> · <a href="#upi-review-heading">Payment reported ({{ stats.upi_to_verify }})</a> · <a href="#upi-follow-up-heading">Follow-ups ({{ stats.upi_follow_up }})</a></p>
+    </section>
+    <section class="staff-card" aria-labelledby="upi-unpaid-heading">
+      <div class="staff-heading"><h2 id="upi-unpaid-heading">1. Awaiting Customer Payment <span class="tag pending">{{ stats.upi_unpaid }}</span></h2></div>
+      <p class="staff-legend">These customers placed an order but have not reported payment. Contact them, and check PhonePe Business for any bank credit before marking the order.</p>
+      {% for order in upi_unpaid %}{{ upi_review_row(order) }}{% else %}<p class="empty">No unreported UPI payments outstanding.</p>{% endfor %}
+    </section>
     <section class="staff-card" aria-labelledby="upi-review-heading">
-      <div class="staff-heading"><h2 id="upi-review-heading">UPI payments awaiting verification</h2></div>
-      <p class="staff-legend">Only verify a payment after checking the actual PhonePe Business credit, amount and unique bank UTR. Payment Not Received and Check Later move an order to follow-up without activating delivery.</p>
-      {% set awaiting_upi = orders|selectattr('payment_method','equalto','upi_qr')|selectattr('payment_status','equalto','pending_verification')|selectattr('upi_review_status','equalto','awaiting')|list %}
-      {% for order in awaiting_upi %}{{ upi_review_row(order) }}{% else %}<p class="empty">No payments awaiting first verification.</p>{% endfor %}
+      <div class="staff-heading"><h2 id="upi-review-heading">2. Payment Reported — Verify Now <span class="tag pending">{{ stats.upi_to_verify }}</span></h2></div>
+      <p class="staff-legend">Customer says payment is complete. Match PhonePe Business amount and unique bank UTR before confirming.</p>
+      {% for order in upi_reported %}{{ upi_review_row(order) }}{% else %}<p class="empty">No newly reported UPI payments awaiting bank verification.</p>{% endfor %}
     </section>
     <section class="staff-card" aria-labelledby="upi-follow-up-heading">
-      <div class="staff-heading"><h2 id="upi-follow-up-heading">UPI payment follow-ups <span class="tag">{{ stats.upi_follow_up }}</span></h2></div>
-      <p class="staff-legend">Unverified orders stay here for rechecking. Staff may confirm later if a real bank credit is found.</p>
-      {% set follow_up = orders|selectattr('payment_method','equalto','upi_qr')|selectattr('payment_status','equalto','pending_verification')|rejectattr('upi_review_status','equalto','awaiting')|list %}
-      {% for order in follow_up %}{{ upi_review_row(order) }}{% else %}<p class="empty">No UPI payments need follow-up.</p>{% endfor %}
+      <div class="staff-heading"><h2 id="upi-follow-up-heading">3. Payment Follow-ups <span class="tag pending">{{ stats.upi_follow_up }}</span></h2></div>
+      <p class="staff-legend">Includes Payment Not Received, Check Later, and any other unverified payment state. Orders remain here until verified or cancelled.</p>
+      {% for order in upi_follow_up %}{{ upi_review_row(order) }}{% else %}<p class="empty">No payment follow-ups outstanding.</p>{% endfor %}
     </section>
     <section class="staff-card" aria-labelledby="delivery-heading">
       <div class="staff-heading"><h2 id="delivery-heading">Daily delivery list</h2><a class="gray-link" href="{{ url_for('export_deliveries', delivery_date=selected_date.isoformat()) }}">Download CSV</a></div>
@@ -92,6 +103,7 @@
         <select name="status" aria-label="Filter by status"><option value="all">All statuses</option>{% for status in statuses %}<option value="{{ status }}" {% if status_filter == status %}selected{% endif %}>{{ status|replace('_', ' ')|title }}</option>{% endfor %}</select>
         <button class="small-button" type="submit">Filter</button><a class="small-button secondary" href="{{ url_for('staff_dashboard') }}">Reset</a>
       </form>
+      <p class="staff-legend">To remove a dummy order: choose <strong>Cancelled</strong> and Save first. Only cancelled, never-paid orders with no payment report can then be deleted. Confirmed, completed, paid and payment-reported orders are protected. Always check PhonePe for late payments first.</p>
       <div class="staff-rows"><table class="staff-table"><thead><tr><th>Customer / reference</th><th>Delivery</th><th>Plan</th><th>Order / Payment</th><th>Update</th></tr></thead><tbody>
         {% for order in orders %}<tr>
           <td><strong>{{ order.name }}</strong><span class="muted">{{ order.order_ref }}</span><br>{{ order.phone }}<br>{{ order.tower }} · {{ order.flat }}<br><span class="muted">{{ order.created_at[0:16]|replace('T',' ') }} IST</span></td>
@@ -107,6 +119,17 @@
               <span class="tag {{ 'positive' if order.payment_status == 'paid' else 'pending' }}" title="Payment is verified either by Razorpay or after staff checks PhonePe credit">{{ order.payment_status|title }}</span>
               <input name="notes" value="{{ order.notes }}" maxlength="500" placeholder="Staff notes" aria-label="Staff notes"><button type="submit">Save</button>
             </form>
+            {% if order.can_delete_test %}
+            <form method="post" action="{{ url_for('delete_test_order', order_ref=order.order_ref) }}"
+                  style="margin-top:9px" onsubmit="return confirm('PERMANENTLY DELETE this cancelled, unpaid TEST order?\n\n' + '{{ order.order_ref }}' + '\n\nOnly continue after verifying no payment was received. This cannot be undone.');">
+              <input type="hidden" name="csrf_token" value="{{ csrf }}">
+              <input type="hidden" name="confirm_delete" value="yes">
+              <input type="hidden" name="confirm_order_ref" value="{{ order.order_ref }}">
+              <button type="submit" class="small-button secondary" style="border:1px solid #9a4b4b;color:#9a3434;background:#fff">Delete Test Order</button>
+            </form>
+            {% elif order.ever_confirmed or order.payment_status == 'paid' or order.status in ('confirmed', 'completed') %}
+            <span class="muted" style="display:block;margin-top:7px;font-size:11px">Protected — cannot delete</span>
+            {% endif %}
           </td>
         </tr>{% else %}<tr><td class="empty" colspan="5">No order requests found.</td></tr>{% endfor %}
       </tbody></table></div>
