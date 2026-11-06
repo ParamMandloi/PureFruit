@@ -70,13 +70,84 @@
   const qrPrice=document.getElementById('upi-due');
   const qrImage=document.getElementById('upi-qr-image');
   const payApp=document.getElementById('upi-pay-app');
+  const payPhonepe=document.getElementById('upi-pay-phonepe');
+  const payGpay=document.getElementById('upi-pay-gpay');
+  const payChoices=document.getElementById('upi-pay-choices');
+  const payGuidance=document.getElementById('upi-app-guidance');
+  const qrDetails=document.getElementById('upi-qr-details');
   const saveQr=document.getElementById('upi-save-qr');
   const orderLabel=document.getElementById('upi-order-ref');
   const claimButton=document.getElementById('upi-paid-claim');
   const feedback=document.getElementById('upi-payment-feedback');
-  const supportsIntent=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+  const userAgent=navigator.userAgent || '';
+  const isAndroid=/Android/i.test(userAgent);
+  const isIOS=/iPhone|iPad|iPod/i.test(userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+  const isMobile=isIOS||isAndroid;
+  // iOS has no generic UPI app chooser. Generic upi://pay can open WhatsApp
+  // or fail. Offer explicit app links instead, directly from a user click.
+  function appPaymentLink(intent, scheme){
+    if(typeof intent!=='string' || !/^upi:\/\/pay\?/i.test(intent)) return null;
+    return scheme + intent.slice('upi://pay'.length);
+  }
   // A customer click is only a payment *report*, not bank-verified receipt.
   // Keep the order in pending_verification until staff checks PhonePe Business.
+  // A customer may come back from an external UPI app. Keep a manual resume
+  // option, but never trap them in checkout after refreshing the website.
+  const pendingKey='purefruit_upi_pending';
+  function forgetLocalPayment(){
+    try{sessionStorage.removeItem(pendingKey);}catch(e){}
+  }
+  function restartWebsite(){
+    forgetLocalPayment();
+    // A full document navigation, not a #top hash jump: new form and fresh pricing.
+    window.location.assign('/');
+  }
+  function addRestartButton(host){
+    if(!host || host.querySelector('.purefruit-restart'))return;
+    const button=document.createElement('button');
+    button.type='button';
+    button.className='button button-outline purefruit-restart';
+    button.textContent='Back to Home / Start a new order';
+    button.style.cssText='display:block;width:100%;margin-top:16px;text-align:center';
+    button.addEventListener('click',restartWebsite);
+    host.appendChild(button);
+  }
+  function offerResumeLink(ref){
+    if(!/^PF-[A-Za-z0-9-]{8,40}$/.test(ref)){
+      forgetLocalPayment();return;
+    }
+    const panel=document.createElement('div');
+    panel.className='form-success';
+    panel.style.cssText='margin:12px 0 18px;padding:14px;';
+    const label=document.createElement('p');
+    label.textContent=`Previous order ${ref} may still be awaiting payment.`;
+    const resume=document.createElement('button');
+    resume.type='button';
+    resume.className='button button-outline';
+    resume.textContent='Resume previous payment';
+    resume.style.cssText='margin:8px 8px 8px 0;';
+    const dismiss=document.createElement('button');
+    dismiss.type='button';
+    dismiss.textContent='Dismiss';
+    dismiss.className='button button-outline';
+    dismiss.style.cssText='margin:8px 0;';
+    resume.addEventListener('click',async()=>{
+      resume.disabled=true;
+      try{
+        await showPayment(ref);
+        panel.remove();
+        if(!qrBox.hidden)qrBox.scrollIntoView({block:'start',behavior:'smooth'});
+      }catch(e){
+        forgetLocalPayment();panel.remove();
+        showError('Could not resume the old payment. You can place a new order or contact PureFruit.');
+      }
+    });
+    dismiss.addEventListener('click',()=>{forgetLocalPayment();panel.remove();});
+    panel.append(label,resume,dismiss);
+    const instruction=form.querySelector('.after-submit');
+    if(instruction)instruction.insertAdjacentElement('afterend',panel);
+    else form.insertBefore(panel,form.firstChild);
+  }
   function showPaymentAcknowledgement(ref, verified=false){
     const heading=document.createElement('strong');
     heading.textContent=verified ? 'Payment confirmed — thank you!' : 'Thank you for your payment!';
@@ -87,6 +158,8 @@
     const orderId=document.createElement('p');
     orderId.textContent=`PureFruit order reference: ${ref}`;
     success.replaceChildren(heading,message,orderId);
+    forgetLocalPayment();
+    addRestartButton(success);
     success.hidden=false;
     qrBox.hidden=true; // No duplicate-payment prompt after reporting.
     success.scrollIntoView({block:'center',behavior:'smooth'});
@@ -112,10 +185,24 @@
     // Per-order dynamic QR is rendered by our server, never by a third party.
     qrImage.src=data.qr;qrImage.hidden=false;
     saveQr.href=data.qr;saveQr.hidden=false;
-    payApp.href=paymentIntent;payApp.hidden=!supportsIntent;
+    const phonepeLink=appPaymentLink(paymentIntent,'phonepe://pay');
+    const gpayLink=appPaymentLink(paymentIntent,'tez://upi/pay');
+    if(isMobile && phonepeLink && gpayLink){
+      payPhonepe.href=phonepeLink;payPhonepe.hidden=false;
+      payGpay.href=gpayLink;payGpay.hidden=false;
+      // Generic UPI can open WhatsApp on iOS; only offer it on Android.
+      payApp.href=paymentIntent;payApp.hidden=!isAndroid;
+      payChoices.hidden=false;payGuidance.hidden=false;
+      qrDetails.open=false; // Quicker payment first; QR remains available.
+    }else{
+      payChoices.hidden=true;payGuidance.hidden=true;
+      payPhonepe.hidden=true;payGpay.hidden=true;payApp.hidden=true;
+      qrDetails.open=true;
+    }
     qrBox.hidden=false;
+    addRestartButton(qrBox);
     freezeForm();
-    feedback.textContent='After paying, return here and tap “I’ve completed payment”. No UTR entry required.';
+    feedback.textContent='After paying, return here and tap “I’ve completed payment”. No UTR entry required. If an app does not open, try the other option or save the QR.';
   }
   form.addEventListener('submit',async event=>{
     event.preventDefault();error.hidden=true;success.hidden=true;
@@ -133,18 +220,17 @@
     try{
       const result=await jsonPost('/api/upi/orders',data);
       currentRef=result.reference;
-      try{sessionStorage.setItem('purefruit_upi_pending',currentRef);}catch(e){}
+      try{sessionStorage.setItem(pendingKey,currentRef);}catch(e){}
       await showPayment(currentRef);
       showSuccess(`Order ${currentRef} saved. Pay ₹${result.amount} using the QR or UPI button below.`);
       qrBox.scrollIntoView({block:'start',behavior:'smooth'});
-    }catch(err){showError(err.message);if(!currentRef){submit.disabled=false;submit.textContent='Place order & show amount-filled QR ↗';}}
+    }catch(err){showError(err.message);if(!currentRef){submit.disabled=false;submit.textContent='Place Order';}}
   });
-  // Recover a pending payment when the customer returns from the UPI app.
+  // Do NOT reopen checkout on every refresh. On browsers that reload when
+  // returning from a payment app, offer an explicit recovery button instead.
   try{
-    const pending=sessionStorage.getItem('purefruit_upi_pending');
-    if(pending&&/^PF-[A-Za-z0-9-]{8,40}$/.test(pending)){
-      showPayment(pending).catch(err=>{feedback.textContent=err.message;});
-    }
+    const previousOrder=sessionStorage.getItem(pendingKey);
+    if(previousOrder)offerResumeLink(previousOrder);
   }catch(e){}
   claimButton.addEventListener('click',async ()=>{
     if(!currentRef)return;
