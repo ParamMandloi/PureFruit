@@ -1,28 +1,36 @@
-# PureFruit — Refresh / Return Home + Telegram WhatsApp drafts
+# PureFruit — No Missed Orders + Safe Test-Entry Deletion
 
-This is a **front-end + Telegram-only** change. No payment, price, staff, database or Razorpay backend files are replaced.
+This single combined patch fixes **unreported unpaid checkouts disappearing from the UPI queue** and adds a protected test-order deletion option. It replaces exactly two files in the **repository root paths**, keeping all other code, Telegram drafts, payment flows, fruit photos and CSS unchanged.
 
-## Files to update in the existing GitHub repository
+## Upload using your GitHub browser
+1. Back up Railway's `/data/orders.db` **before** deploying. Deletions are permanent.
+2. Replace root `app.py` with the `app.py` in this ZIP.
+3. Replace root `templates/admin.html` with `templates/admin.html` in this ZIP.
+4. Commit both changes to `main`. Verify Railway is running the new commit.
+5. Refresh `https://www.purefruit.in/staff` in an incognito window.
 
-* `static/app.js` — removes automatic checkout restoration after browser reload; retains an optional Resume previous payment control and adds Back to Home / Start a new order.
-* `templates/index.html` — preserves the current fast mobile UPI layout and updates the JavaScript asset version to avoid stale browser caches.
-* `telegram_alerts.py` — keeps current staff alerts, then sends an **additional separate copy-ready WhatsApp draft** in the *private Telegram group* for three events: new order (unpaid), payment reported (not yet verified), and payment verified (confirmed). It does not send WhatsApp messages automatically.
+## New queues
+- **Awaiting Customer Payment:** any unpaid UPI order even when no customer clicked `I've completed payment`.
+- **Payment Reported — Verify Now:** customer says they paid.
+- **Payment Follow-ups:** flagged by staff (`Payment Not Received`, `Check Later`) or other unverified states.
+- Queues are computed from ALL outstanding UPI orders, independently of All Orders filters/pagination.
+- No unverified order enters deliveries. Never mark Payment Received without verifying the bank credit and UTR.
 
-## Browser-only deployment
+## Delete only unverified cancelled test orders
+1. Find the dummy order under **All orders / payment attempts**.
+2. Select status **Cancelled**, then click **Save**.
+3. If there has been **no** reported or verified payment, bank reference, or Razorpay payment attempt, a **Delete Test Order** button will appear. Confirm the browser prompt.
+4. Cancelled orders with reported payments still cannot be deleted; keep these for reconciliation.
+5. A minimal audit entry (order reference, deleted time, old status) is retained in the DB without personal details.
+6. **Paid, confirmed or completed orders cannot be deleted, even if they are later cancelled.** A new permanent `ever_confirmed` flag preserves this across status changes.
 
-1. Back up `/data/orders.db` before any deployment, as usual.
-2. Extract this ZIP to Downloads.
-3. In github.com/ParamMandloi/PureFruit on `main`, replace the exact three files at the paths above. Do **not** upload a new enclosing folder.
-4. Commit directly to main and confirm Railway runs the latest commit.
-5. Refresh the site and test a new unpaid order using clearly marked test details. The checkout should show the UPI options.
-6. Refresh the page: the homepage/order form should be available again, with a small **Resume previous payment** option. Selecting Resume returns to the existing order without creating a new one; Dismiss forgets only the browser's saved reference.
-7. Place another test order and tap **I've completed payment** without sending actual money. Confirm Telegram receives two messages: staff status + copy-ready WhatsApp draft. The order must remain Pending Verification in `/staff`.
-8. In `/staff`, use the test order's Check Later / Payment Not Received as needed. To test the final confirmed draft, **only** mark Payment Received after matching a genuine credit and UTR in PhonePe Business. Do not mark an unpaid test order paid.
+IMPORTANT: Even when an order is still unpaid in the website, someone could have sent a bank transfer late. Check PhonePe Business before using Delete. Never delete genuine customer orders merely to tidy up the queue; cancel or follow up instead.
 
-## Safety and scope
+## Verification
+- Create a *test* UPI order and stop on its payment screen without clicking completed. It should appear immediately under Awaiting Customer Payment.
+- From staff, click Check Later; it should move to Follow-ups. Click Recheck Payment; it returns to Awaiting.
+- Mark a dummy unpaid order Cancelled and reload. Delete Test Order should appear; deleting removes it from reports.
+- Check an existing Paid or Confirmed order: it must display Protected and never show a delete button.
+- Confirm the old customer payment confirmation flow and Telegram notifications remain functional.
 
-* Do not share Telegram bot credentials or API secrets in GitHub.
-* Group messages contain the customer name and mobile number in the private operations group to allow manual WhatsApp follow-up; restrict membership to approved staff and avoid forwarding internal alerts externally.
-* Staff must verify a real credited amount and UTR before confirming any order. Tapping I've completed payment does **not** confirm funds.
-* An existing order is not cancelled or deleted when a customer returns to Home or dismisses the Resume link.
-* If the user has since edited these two front-end files, merge the changes instead of replacing later work.
+No code in `static/app.js`, `templates/index.html`, `telegram_alerts.py`, `static/style.css`, or Railway environment variables is changed.

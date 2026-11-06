@@ -142,6 +142,24 @@ def setup_db():
             con.execute("ALTER TABLE orders ADD COLUMN upi_review_note TEXT NOT NULL DEFAULT ''")
         if "upi_reviewed_at" not in cols:
             con.execute("ALTER TABLE orders ADD COLUMN upi_reviewed_at TEXT")
+        # Keep an audit trail for test-order cleanup, without personal customer data.
+        # Monotonic protection: once confirmed/paid, never eligible for cleanup,
+        # even if staff later changes the displayed status to Cancelled.
+        if "ever_confirmed" not in cols:
+            con.execute("ALTER TABLE orders ADD COLUMN ever_confirmed INTEGER NOT NULL DEFAULT 0")
+        con.execute("""UPDATE orders SET ever_confirmed=1
+            WHERE ever_confirmed=0 AND (
+                status IN ('confirmed','completed') OR payment_status='paid'
+                OR paid_at IS NOT NULL OR upi_verified_at IS NOT NULL
+                OR razorpay_payment_id IS NOT NULL OR upi_verified_amount IS NOT NULL
+            )""")
+        con.execute("""CREATE TABLE IF NOT EXISTS deleted_test_order_audit (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            order_ref TEXT NOT NULL UNIQUE,
+            deleted_at TEXT NOT NULL,
+            previous_status TEXT NOT NULL,
+            previous_payment_status TEXT NOT NULL
+        )""")
         con.execute("CREATE INDEX IF NOT EXISTS orders_start_date_idx ON orders(start_date)")
         con.execute("CREATE UNIQUE INDEX IF NOT EXISTS orders_razorpay_order_idx ON orders(razorpay_order_id)")
         con.execute("CREATE UNIQUE INDEX IF NOT EXISTS orders_razorpay_payment_idx ON orders(razorpay_payment_id)")
@@ -223,7 +241,7 @@ def mark_paid(order, payment_id):
     timestamp = now_ist().isoformat(timespec="seconds")
     with get_db() as con:
         cur = con.execute(
-            """UPDATE orders SET payment_status='paid',
+            """UPDATE orders SET payment_status='paid', ever_confirmed=1,
                    status=CASE WHEN status='payment_pending' THEN 'confirmed' ELSE status END,
                    razorpay_payment_id=COALESCE(razorpay_payment_id, ?),
                    paid_at=COALESCE(paid_at, ?), updated_at=?
@@ -530,7 +548,7 @@ def staff_confirm_upi(order_ref):
     if (not re.fullmatch(r"[A-Z0-9-]{10,40}", confirmed_utr) or
             (current["upi_reference"] and not hmac.compare_digest(confirmed_utr, current["upi_reference"])) or
             verified_amount != str(current["price"]) or request.form.get("bank_credit_checked") != "yes" or
-            current["payment_status"] != "pending_verification"):
+            current["payment_status"] not in ("unpaid", "pending_verification")):
         flash("Not confirmed. Match a real PhonePe bank credit, amount and unique UTR first.", "error")
         return redirect(url_for("staff_dashboard"))
     timestamp = now_ist().isoformat(timespec="seconds")
@@ -538,12 +556,12 @@ def staff_confirm_upi(order_ref):
     start_date = max(old_start, next_available_day()).isoformat()
     try:
         with get_db() as con:
-            cur = con.execute("""UPDATE orders SET payment_status='paid', status='confirmed',
+            cur = con.execute("""UPDATE orders SET payment_status='paid', status='confirmed', ever_confirmed=1,
                          paid_at=?, upi_verified_at=?, upi_verified_by='staff',
                          upi_verified_amount=?, start_date=?, updated_at=?, upi_reference=?,
                          upi_review_status='verified', upi_reviewed_at=?, upi_review_note='Bank credit verified'
                          WHERE order_ref=? AND payment_method='upi_qr'
-                         AND payment_status='pending_verification' AND status!='cancelled'
+                         AND payment_status IN ('unpaid','pending_verification') AND status!='cancelled'
                          AND (upi_reference IS NULL OR upi_reference=?)""",
                       (timestamp, timestamp, current["price"], start_date, timestamp,
                        confirmed_utr, timestamp, order_ref, confirmed_utr))
@@ -576,7 +594,7 @@ def staff_review_upi(order_ref):
         updated = con.execute("""UPDATE orders
             SET upi_review_status=?, upi_review_note=?, upi_reviewed_at=?, updated_at=?
             WHERE order_ref=? AND payment_method='upi_qr'
-              AND payment_status='pending_verification' AND status!='cancelled'""",
+              AND payment_status IN ('unpaid','pending_verification') AND status!='cancelled'""",
             ("awaiting" if action == "recheck" else action,
              note, stamp, stamp, order_ref))
     if updated.rowcount != 1:
@@ -721,15 +739,36 @@ def staff_dashboard():
         orders = [r for r in orders if any(q in str(r[key]).lower() for key in ("order_ref", "name", "phone", "tower", "flat"))]
     if status_filter in STATUSES:
         orders = [r for r in orders if r["status"] == status_filter]
+    # Operational queues are always based on ALL outstanding orders, not the
+    # filtered/paginated All Orders table. Every unverified UPI order must be
+    # visible in exactly one queue so staff cannot miss a valid checkout.
     stats_orders = all_orders()
+    for order in orders:
+        order["can_delete_test"] = can_delete_test_order(order)
+    outstanding = [r for r in stats_orders
+                   if r.get("payment_method") == "upi_qr"
+                   and r.get("payment_status") not in ("paid", "refunded")
+                   and r.get("status") != "cancelled"]
+    upi_unpaid = [r for r in outstanding
+                  if r.get("payment_status") == "unpaid"
+                  and r.get("upi_review_status", "awaiting") in ("awaiting", "")]
+    upi_reported = [r for r in outstanding
+                    if r.get("payment_status") == "pending_verification"
+                    and r.get("upi_review_status", "awaiting") in ("awaiting", "")]
+    # Catch any other unverified state rather than silently hiding it.
+    upi_follow_up = [r for r in outstanding
+                     if r not in upi_unpaid and r not in upi_reported]
     stats = {
         "requests": len(stats_orders),
         "confirmed": sum(r["status"] in ("confirmed", "completed") for r in stats_orders),
         "paid": sum(r["payment_status"] == "paid" for r in stats_orders),
         "booked_value": sum(r["price"] for r in stats_orders if r["payment_status"] == "paid"),
-        "upi_to_verify": sum(r.get("payment_method") == "upi_qr" and r["payment_status"] == "pending_verification" and r.get("upi_review_status", "awaiting") == "awaiting" for r in stats_orders),
-        "upi_follow_up": sum(r.get("payment_method") == "upi_qr" and r["payment_status"] == "pending_verification" and r.get("upi_review_status") in ("not_received", "check_later") for r in stats_orders),
+        "upi_unverified": len(outstanding),
+        "upi_unpaid": len(upi_unpaid),
+        "upi_to_verify": len(upi_reported),
+        "upi_follow_up": len(upi_follow_up),
     }
+    assert len(outstanding) == sum((len(upi_unpaid), len(upi_reported), len(upi_follow_up)))
     selected_date = safe_date(request.args.get("delivery_date"))
     delivery_orders = []
     if selected_date.weekday() < 5:
@@ -740,7 +779,60 @@ def staff_dashboard():
     return render_template("admin.html", csrf=csrf_token(), orders=orders[:300],
                            stats=stats, statuses=STATUSES, selected_date=selected_date,
                            fruit=FRUITS.get(selected_date.weekday()), deliveries=delivery_orders,
-                           q=q, status_filter=status_filter, slots=SLOTS)
+                            q=q, status_filter=status_filter, slots=SLOTS,
+                            upi_unpaid=upi_unpaid, upi_reported=upi_reported,
+                            upi_follow_up=upi_follow_up)
+
+
+def can_delete_test_order(order):
+    """Only cancelled, never-paid and never-reported records may be deleted.
+
+    Confirmed or completed orders, verified payments, UPI payment reports,
+    and Razorpay payment attempts are retained, even after cancellation.
+    """
+    return (
+        order.get("status") == "cancelled"
+        and order.get("payment_status") == "unpaid"
+        and not order.get("ever_confirmed", 0)
+        and not any(order.get(field) for field in (
+            "paid_at", "razorpay_order_id", "razorpay_payment_id",
+            "upi_reference", "upi_submitted_at", "upi_verified_at",
+            "upi_verified_by", "upi_verified_amount"
+        ))
+        and order.get("upi_review_status") != "verified"
+    )
+
+
+@app.post("/staff/order/<order_ref>/delete-test")
+@staff_only
+def delete_test_order(order_ref):
+    """Delete only demonstrably unpaid, cancelled test entries; retain audit.
+
+    Transactional guard prevents a payment update and deletion from racing.
+    GET requests, CSRF-free requests and deletion of paid orders are rejected.
+    """
+    require_csrf()
+    if request.form.get("confirm_order_ref") != order_ref or request.form.get("confirm_delete") != "yes":
+        abort(400, description="Explicit order-reference confirmation required")
+    timestamp = now_ist().isoformat(timespec="seconds")
+    with get_db() as con:
+        con.execute("BEGIN IMMEDIATE")
+        row = con.execute("SELECT * FROM orders WHERE order_ref=?", (order_ref,)).fetchone()
+        if row is None:
+            abort(404)
+        order = dict(row)
+        if not can_delete_test_order(order):
+            flash("Deletion blocked. Only cancelled, unpaid orders with no payment attempt or report may be deleted. Paid and confirmed orders are permanently protected.", "error")
+            return redirect(url_for("staff_dashboard"))
+        con.execute("""INSERT INTO deleted_test_order_audit
+                    (order_ref, deleted_at, previous_status, previous_payment_status)
+                    VALUES (?, ?, ?, ?)""",
+                    (order_ref, timestamp, order["status"], order["payment_status"]))
+        deleted = con.execute("DELETE FROM orders WHERE order_ref=?", (order_ref,))
+        if deleted.rowcount != 1:
+            raise RuntimeError("Expected exactly one cancelled test order to be deleted")
+    flash(f"Cancelled unpaid test order {order_ref} was deleted. Audit reference retained.", "success")
+    return redirect(url_for("staff_dashboard"))
 
 
 @app.post("/staff/order/<order_ref>")
@@ -758,9 +850,11 @@ def update_order(order_ref):
         flash("Unpaid orders cannot be confirmed. Verify UPI bank credit or await Razorpay capture.", "error")
         return redirect(url_for("staff_dashboard"))
     with get_db() as con:
-        cursor = con.execute("""UPDATE orders SET status=?, notes=?, updated_at=?
+        cursor = con.execute("""UPDATE orders SET status=?, notes=?, updated_at=?,
+                                ever_confirmed=CASE WHEN ? IN ('confirmed','completed')
+                                                    THEN 1 ELSE ever_confirmed END
                                 WHERE order_ref=?""",
-                             (status, notes, now_ist().isoformat(timespec="seconds"), order_ref))
+                             (status, notes, now_ist().isoformat(timespec="seconds"), status, order_ref))
         if not cursor.rowcount:
             abort(404)
     flash(f"Updated {order_ref}.", "success")
