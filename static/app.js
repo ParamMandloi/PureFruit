@@ -160,6 +160,13 @@
     success.replaceChildren(heading,message,orderId);
     forgetLocalPayment();
     addRestartButton(success);
+    if(!success.querySelector('.purefruit-my-orders')){
+      const history=document.createElement('a');
+      history.href='/my-orders';history.className='button button-outline purefruit-my-orders';
+      history.textContent='View My Orders';
+      history.style.cssText='display:block;text-align:center;margin-top:9px';
+      success.appendChild(history);
+    }
     success.hidden=false;
     qrBox.hidden=true; // No duplicate-payment prompt after reporting.
     success.scrollIntoView({block:'center',behavior:'smooth'});
@@ -243,5 +250,14 @@
       // message can be recovered after a refresh or return from a UPI app.
     }catch(err){feedback.textContent=err.message;claimButton.disabled=false;claimButton.textContent="I've completed payment";}
   });
+  // A deliberate Pay Now click in My Orders resumes the *same* order and amount.
+  // Remove the query parameter after opening so a later page refresh is clean.
+  const restoreRef = new URLSearchParams(window.location.search).get('resume');
+  if(restoreRef && /^PF-[A-Za-z0-9-]{8,40}$/.test(restoreRef)){
+    window.history.replaceState(null,'',window.location.pathname+'#order');
+    showPayment(restoreRef).then(()=>{
+      qrBox.scrollIntoView({block:'start',behavior:'smooth'});
+    }).catch(err=>showError(err.message||'This order cannot be resumed. Contact PureFruit.'));
+  }
   // Never assume returning from the payment app means success.
 })();
