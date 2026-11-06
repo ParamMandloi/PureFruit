@@ -1,6 +1,7 @@
 """PureFruit: manual PhonePe UPI QR payments and staff order management on Railway."""
 
 import csv
+import hashlib
 import hmac
 import io
 import os
@@ -160,10 +161,122 @@ def setup_db():
             previous_status TEXT NOT NULL,
             previous_payment_status TEXT NOT NULL
         )""")
+        # Non-destructive migration: private per-browser order history + archive.
+        cols = {col[1] for col in con.execute("PRAGMA table_info(orders)")}
+        if "archived_at" not in cols:
+            con.execute("ALTER TABLE orders ADD COLUMN archived_at TEXT")
+        if "archive_reason" not in cols:
+            con.execute("ALTER TABLE orders ADD COLUMN archive_reason TEXT NOT NULL DEFAULT ''")
+        con.execute("""CREATE TABLE IF NOT EXISTS customer_order_devices (
+            order_ref TEXT NOT NULL,
+            device_hash TEXT NOT NULL,
+            linked_at TEXT NOT NULL,
+            PRIMARY KEY(order_ref, device_hash)
+        )""")
+        con.execute("CREATE INDEX IF NOT EXISTS customer_order_device_idx ON customer_order_devices(device_hash)")
+        con.execute("""CREATE TABLE IF NOT EXISTS customer_recovery_failures (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            source_hash TEXT NOT NULL,
+            attempted_at TEXT NOT NULL
+        )""")
+        con.execute("CREATE INDEX IF NOT EXISTS customer_recovery_source_idx ON customer_recovery_failures(source_hash,attempted_at)")
+        con.execute("CREATE INDEX IF NOT EXISTS orders_archived_idx ON orders(archived_at)")
         con.execute("CREATE INDEX IF NOT EXISTS orders_start_date_idx ON orders(start_date)")
         con.execute("CREATE UNIQUE INDEX IF NOT EXISTS orders_razorpay_order_idx ON orders(razorpay_order_id)")
         con.execute("CREATE UNIQUE INDEX IF NOT EXISTS orders_razorpay_payment_idx ON orders(razorpay_payment_id)")
         con.execute("CREATE UNIQUE INDEX IF NOT EXISTS orders_upi_reference_idx ON orders(upi_reference)")
+
+
+CUSTOMER_COOKIE = "purefruit_customer_device"
+CUSTOMER_COOKIE_DAYS = 180
+
+
+def customer_device_token():
+    """Never trust a phone number alone as customer authentication."""
+    value = request.cookies.get(CUSTOMER_COOKIE, "")
+    if not re.fullmatch(r"[0-9a-f]{64}", value):
+        value = secrets.token_hex(32)
+    return value
+
+
+def device_hash(token):
+    return hashlib.sha256(token.encode("ascii")).hexdigest()
+
+
+def set_customer_cookie(response, token):
+    response.set_cookie(
+        CUSTOMER_COOKIE, token, max_age=CUSTOMER_COOKIE_DAYS * 86400,
+        httponly=True, secure=app.config["SESSION_COOKIE_SECURE"],
+        samesite="Lax", path="/",
+    )
+    return response
+
+
+def link_customer_order(con, order_ref, token):
+    con.execute("""INSERT OR IGNORE INTO customer_order_devices
+                   (order_ref, device_hash, linked_at) VALUES (?, ?, ?)""",
+                (order_ref, device_hash(token), now_ist().isoformat(timespec="seconds")))
+
+
+def owned_customer_orders():
+    token = request.cookies.get(CUSTOMER_COOKIE, "")
+    if not re.fullmatch(r"[0-9a-f]{64}", token):
+        return []
+    with get_db() as con:
+        return [dict(row) for row in con.execute("""SELECT o.* FROM orders AS o
+            INNER JOIN customer_order_devices AS d ON d.order_ref=o.order_ref
+            WHERE d.device_hash=? ORDER BY o.id DESC LIMIT 150""", (device_hash(token),))]
+
+
+def remaining_days(order):
+    if order["payment_status"] != "paid" or order["status"] == "cancelled":
+        return None
+    return sum(1 for d in dates_in_plan(date.fromisoformat(order["start_date"]),
+                                       int(order["plan_days"])) if d >= now_ist().date())
+
+
+@app.get("/my-orders")
+def my_orders():
+    orders = owned_customer_orders()
+    for order in orders:
+        order["days_left"] = remaining_days(order)
+    return render_template("my_orders.html", csrf=csrf_token(), orders=orders)
+
+
+@app.post("/my-orders/recover")
+def recover_customer_order():
+    """Recover ONE older order using both its random reference and its mobile.
+
+    No browse-by-phone functionality: a phone number must never reveal a stranger's
+    order history. Persistent failure throttling limits guessing attempts.
+    """
+    require_csrf()
+    ref = request.form.get("order_ref", "").strip().upper()
+    phone = re.sub(r"\D", "", request.form.get("phone", ""))
+    if phone.startswith("91") and len(phone) == 12:
+        phone = phone[2:]
+    source = request.remote_addr or "unknown"
+    source_hash = hashlib.sha256((app.secret_key + "|" + source).encode()).hexdigest()
+    cutoff = (now_ist() - timedelta(hours=1)).isoformat()
+    with get_db() as con:
+        con.execute("DELETE FROM customer_recovery_failures WHERE attempted_at < ?", (cutoff,))
+        count = con.execute("SELECT COUNT(*) FROM customer_recovery_failures WHERE source_hash=?",
+                            (source_hash,)).fetchone()[0]
+        if count >= 8:
+            flash("Too many recovery attempts. Please contact PureFruit support.", "error")
+            return redirect(url_for("my_orders"))
+        order = con.execute("SELECT order_ref,phone FROM orders WHERE order_ref=?", (ref,)).fetchone()             if re.fullmatch(r"PF-[A-Z0-9-]{8,40}", ref) else None
+        match = (order is not None and len(phone) == 10 and
+                 hmac.compare_digest(str(order["phone"]), phone))
+        if not match:
+            con.execute("INSERT INTO customer_recovery_failures(source_hash,attempted_at) VALUES (?,?)",
+                        (source_hash, now_ist().isoformat(timespec="seconds")))
+            flash("Order not found. Check the order reference and registered phone number.", "error")
+            return redirect(url_for("my_orders"))
+        token = customer_device_token()
+        link_customer_order(con, ref, token)
+    response = redirect(url_for("my_orders"))
+    return set_customer_cookie(response, token)
 
 
 def csrf_token():
@@ -268,7 +381,7 @@ def security_headers(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["X-Frame-Options"] = "DENY"
-    response.headers["Cache-Control"] = "no-store" if request.path.startswith("/staff") else "no-cache"
+    response.headers["Cache-Control"] = "no-store" if request.path.startswith(("/staff", "/my-orders")) else "no-cache"
     return response
 
 
@@ -390,6 +503,28 @@ def create_upi_order():
     if not validated:
         return jsonify(error="Check name, mobile, tower, flat, plan, slot and weekday start date."), 400
     timestamp = now_ist().isoformat(timespec="seconds")
+    # Prevent duplicate checkouts from the same recognized customer browser.
+    # Never merge different customers simply because someone typed the same phone.
+    previous_device = request.cookies.get(CUSTOMER_COOKIE, "")
+    if re.fullmatch(r"[0-9a-f]{64}", previous_device):
+        with get_db() as con:
+            old = con.execute("""SELECT o.* FROM orders o
+                JOIN customer_order_devices d ON d.order_ref=o.order_ref
+                WHERE d.device_hash=? AND o.payment_method='upi_qr'
+                  AND o.payment_status IN ('unpaid','pending_verification')
+                  AND o.status!='cancelled'
+                  AND o.phone=? AND o.name=? AND o.tower=? AND o.flat=?
+                  AND o.plan_days=? AND o.delivery_slot=? AND o.start_date=?
+                ORDER BY o.id DESC LIMIT 1""", (
+                device_hash(previous_device), validated["phone"], validated["name"],
+                validated["tower"], validated["flat"], validated["plan_days"],
+                validated["delivery_slot"], validated["start_date"])).fetchone()
+        if old:
+            # Retain the original discounted price/QR instead of a second sale.
+            response = jsonify(reference=old["order_ref"], amount=old["price"],
+                               status=old["payment_status"], existing_order=True,
+                               my_orders=url_for("my_orders"))
+            return response, 200
     order_ref = "PF-" + now_ist().strftime("%y%m%d") + "-" + secrets.token_hex(6).upper()
     validated.update(order_ref=order_ref, created_at=timestamp, updated_at=timestamp)
     with get_db() as con:
@@ -397,9 +532,13 @@ def create_upi_order():
             price,delivery_slot,start_date,status,payment_status,updated_at,payment_method)
             VALUES (:order_ref,:created_at,:name,:phone,:tower,:flat,:plan_days,:price,
             :delivery_slot,:start_date,'payment_pending','unpaid',:updated_at,'upi_qr')""", validated)
+        token = customer_device_token()
+        link_customer_order(con, order_ref, token)
     send_order_alert("new", validated)
-    return jsonify(reference=order_ref, amount=validated["price"],
-                   payee="GREENRISE BUZZ PRIVATE LIMITED", status="payment_pending"), 201
+    response = jsonify(reference=order_ref, amount=validated["price"],
+                      payee="GREENRISE BUZZ PRIVATE LIMITED", status="payment_pending",
+                      my_orders=url_for("my_orders"))
+    return set_customer_cookie(response, token), 201
 
 
 def create_upi_uri(order, mode="01"):
@@ -735,6 +874,12 @@ def staff_dashboard():
     orders = all_orders()
     q = clean_text(request.args.get("q"), 60).lower()
     status_filter = request.args.get("status", "all")
+    archive_view = request.args.get("view", "active")
+    if archive_view == "archived":
+        orders = [r for r in orders if r.get("archived_at")]
+    elif archive_view != "all":
+        archive_view = "active"
+        orders = [r for r in orders if not r.get("archived_at")]
     if q:
         orders = [r for r in orders if any(q in str(r[key]).lower() for key in ("order_ref", "name", "phone", "tower", "flat"))]
     if status_filter in STATUSES:
@@ -745,10 +890,12 @@ def staff_dashboard():
     stats_orders = all_orders()
     for order in orders:
         order["can_delete_test"] = can_delete_test_order(order)
+        order["can_archive"] = can_archive_order(order)
     outstanding = [r for r in stats_orders
                    if r.get("payment_method") == "upi_qr"
                    and r.get("payment_status") not in ("paid", "refunded")
-                   and r.get("status") != "cancelled"]
+                   and r.get("status") != "cancelled"
+                   and not r.get("archived_at")]
     upi_unpaid = [r for r in outstanding
                   if r.get("payment_status") == "unpaid"
                   and r.get("upi_review_status", "awaiting") in ("awaiting", "")]
@@ -780,8 +927,58 @@ def staff_dashboard():
                            stats=stats, statuses=STATUSES, selected_date=selected_date,
                            fruit=FRUITS.get(selected_date.weekday()), deliveries=delivery_orders,
                             q=q, status_filter=status_filter, slots=SLOTS,
+                            archive_view=archive_view,
+                            archived_count=sum(bool(r.get("archived_at")) for r in stats_orders),
                             upi_unpaid=upi_unpaid, upi_reported=upi_reported,
                             upi_follow_up=upi_follow_up)
+
+
+def can_archive_order(order):
+    """Never hide an unpaid live checkout or an active paid delivery."""
+    if order.get("archived_at"):
+        return False
+    if order.get("status") == "cancelled":
+        return True
+    if order.get("payment_status") == "paid" and order.get("status") in ("confirmed", "completed"):
+        try:
+            last_delivery = list(dates_in_plan(date.fromisoformat(order["start_date"]),
+                                               int(order["plan_days"]))) [-1]
+            return last_delivery < now_ist().date()
+        except (ValueError, IndexError):
+            return False
+    return False
+
+
+@app.post("/staff/order/<order_ref>/archive")
+@staff_only
+def archive_order(order_ref):
+    require_csrf()
+    note = clean_text(request.form.get("reason", "Staff archive"), 160)
+    timestamp = now_ist().isoformat(timespec="seconds")
+    with get_db() as con:
+        con.execute("BEGIN IMMEDIATE")
+        row = con.execute("SELECT * FROM orders WHERE order_ref=?", (order_ref,)).fetchone()
+        if row is None:
+            abort(404)
+        if not can_archive_order(dict(row)):
+            flash("Cannot archive an active or unpaid pending order. Cancel it first or wait until deliveries have ended.", "error")
+            return redirect(url_for("staff_dashboard"))
+        con.execute("UPDATE orders SET archived_at=?,archive_reason=?,updated_at=? WHERE order_ref=?",
+                    (timestamp, note, timestamp, order_ref))
+    flash(f"Archived {order_ref}. Its record remains available in Archived Orders.", "success")
+    return redirect(url_for("staff_dashboard"))
+
+
+@app.post("/staff/order/<order_ref>/restore")
+@staff_only
+def restore_order(order_ref):
+    require_csrf()
+    with get_db() as con:
+        con.execute("UPDATE orders SET archived_at=NULL,archive_reason='',updated_at=? "
+                    "WHERE order_ref=? AND archived_at IS NOT NULL",
+                    (now_ist().isoformat(timespec="seconds"), order_ref))
+    flash(f"Restored {order_ref} to the active staff list.", "success")
+    return redirect(url_for("staff_dashboard", view="archived"))
 
 
 def can_delete_test_order(order):
@@ -828,6 +1025,8 @@ def delete_test_order(order_ref):
                     (order_ref, deleted_at, previous_status, previous_payment_status)
                     VALUES (?, ?, ?, ?)""",
                     (order_ref, timestamp, order["status"], order["payment_status"]))
+        # Remove only device pointers for this physically deleted test order.
+        con.execute("DELETE FROM customer_order_devices WHERE order_ref=?", (order_ref,))
         deleted = con.execute("DELETE FROM orders WHERE order_ref=?", (order_ref,))
         if deleted.rowcount != 1:
             raise RuntimeError("Expected exactly one cancelled test order to be deleted")
@@ -893,6 +1092,7 @@ def export_orders():
             ("upi_verified_amount", "UPI verified amount INR"),
             ("paid_at", "Paid at IST"), ("upi_review_status", "Staff review"),
             ("upi_review_note", "Staff review note"), ("upi_reviewed_at", "Staff reviewed at IST"),
+            ("archived_at", "Archived at"), ("archive_reason", "Archive reason"),
             ("notes", "Notes")]
     return csv_response(all_orders(), "purefruit-orders.csv", cols)
 
