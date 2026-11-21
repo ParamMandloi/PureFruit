@@ -24,6 +24,8 @@ from flask import (
 )
 
 app = Flask(__name__)
+from meta_whatsapp_webhook import meta_whatsapp_bp
+app.register_blueprint(meta_whatsapp_bp)
 app.secret_key = os.getenv("SECRET_KEY", "LOCAL_DEVELOPMENT_ONLY_CHANGE_ME")
 app.config.update(
     MAX_CONTENT_LENGTH=16 * 1024,
