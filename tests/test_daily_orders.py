@@ -181,26 +181,27 @@ class DailyOrdersTest(unittest.TestCase):
         with app_module.get_db() as con:
             self.assertIsNone(con.execute("SELECT archived_at FROM daily_orders WHERE order_ref='TEST-0'").fetchone()[0])
 
-    def test_new_upi_recipient_and_phonepe_gpay_links(self):
+    def test_manual_upi_payment_is_available_without_app_deep_links(self):
         self.open_menu()
         order = self.client.post("/", data=self.form_fields(), follow_redirects=False)
         self.assertEqual(order.status_code, 303)
         self.assertEqual(app_module.UPI_PAYEE_ADDRESS, "9619140077-huf@ybl")
+        self.assertEqual(app_module.UPI_PAYEE_NAME, "PARAMPRAKASH RAJENDRA MANDLOI KARTA")
         page = self.client.get(order.headers["Location"])
         self.assertEqual(page.status_code, 200)
         self.assertIn(b"9619140077-huf@ybl", page.data)
-        # Generic UPI chooser was removed because it can launch WhatsApp on iOS.
-        self.assertNotIn(b'href="upi://pay?', page.data)
-        self.assertIn(b"phonepe://pay?pa=9619140077-huf%40ybl", page.data)
-        self.assertIn(b"tez://upi/pay?pa=9619140077-huf%40ybl", page.data)
+        self.assertIn(b"Copy UPI ID", page.data)
+        self.assertIn(b"Pay to UPI ID", page.data)
+        self.assertIn(b"Open QR image to save", page.data)
         self.assertIn(b"Order confirmed", page.data)
         self.assertIn(b"I've made payment", page.data)
-        self.assertNotIn(b'href="upi://pay?', page.data)
-        self.assertNotIn(b'wa.me/', page.data)
+        for prefix in (b"upi://", b"phonepe://", b"tez://", b"wa.me/"):
+            self.assertNotIn(prefix, page.data)
         ref = order.headers["Location"].rsplit("/", 1)[-1]
         qr = self.client.get("/daily/qr/"+ref+".png")
         self.assertEqual(qr.status_code, 200)
         self.assertEqual(qr.content_type, "image/png")
+        self.assertGreater(len(qr.data), 100)
 
     def test_payment_made_reports_only_and_does_not_hold_delivery(self):
         self.open_menu()

@@ -328,20 +328,11 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
         order = order_by_ref(order_ref)
         if not order or order.get("deleted_at"):
             abort(404)
-        params = {
-            "pa": upi_payee_address, "pn": upi_payee_name,
-            "am": f'{order["total_price"]:.2f}', "cu": "INR",
-            "tr": order_ref, "tn": "PureFruit " + order_ref
-        }
-        query = urlencode(params)
+        # Orders are booked before payment. Avoid mobile-app deep links that may
+        # trigger payer-side security declines for this non-merchant VPA.
         response = app.make_response(render_template(
             "daily_thanks.html", order=order, slots=SLOTS,
-            csrf=csrf_token(),
-            upi_link="upi://pay?" + query,
-            phonepe_link="phonepe://pay?" + query,
-            phonepe_ios_link="phonepe://upi/pay?" + query,
-            gpay_link="tez://upi/pay?" + query,
-            payment_address=upi_payee_address,
+            csrf=csrf_token(), payment_address=upi_payee_address,
         ))
         response.headers["Cache-Control"] = "private, no-store"
         return response
@@ -378,10 +369,11 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
         order = order_by_ref(order_ref)
         if not order or order.get("deleted_at") or order["status"] == "cancelled":
             abort(404)
+        # Minimal static recipient QR. No app deep link, reference, forced
+        # amount, or merchant fields. Customers type the amount in their app.
+        # Use the bank-registered recipient name, not a brand alias.
         params = {
-            "pa": upi_payee_address, "pn": upi_payee_name,
-            "am": f'{order["total_price"]:.2f}', "cu": "INR",
-            "tr": order_ref, "tn": "PureFruit " + order_ref
+            "pa": upi_payee_address, "pn": upi_payee_name, "cu": "INR"
         }
         qr = qrcode.QRCode(box_size=7, border=3)
         qr.add_data("upi://pay?" + urlencode(params))
