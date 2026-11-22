@@ -64,7 +64,20 @@ th{font-size:11px;letter-spacing:.04em;color:#777;text-transform:uppercase}
   {% endif %}
 </section>
 <section class="box">
-  <h2>Orders · {{ selected }}</h2>
+  <h2>{{ 'Archived past orders' if view=='archived' else 'Orders · ' ~ selected }}</h2>
+  <div class="flex" style="margin-bottom:12px;align-items:center">
+    <a class="button secondary" href="{{ url_for('daily_admin',date=selected,view='active') }}">Active orders</a>
+    <a class="button secondary" href="{{ url_for('daily_admin',view='archived') }}">Archived orders ({{ archived_count }})</a>
+    {% if view!='archived' %}
+    <form method="post" action="{{ url_for('daily_archive_old') }}"
+      onsubmit="return confirm('Clear all past delivery dates from the active daily order list? Order history and payment records will be retained under Archived orders.');">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <input type="hidden" name="confirm_archive" value="yes">
+      <button class="danger" type="submit">Clear old orders</button>
+    </form>
+    {% endif %}
+  </div>
+  {% if view!='archived' %}
   <div class="stat-grid">
     <div class="stat"><small>Active orders</small><strong>{{ stats.orders }} / {{ limit }}</strong></div>
     <div class="stat"><small>Remaining</small><strong>{{ stats.remaining }}</strong></div>
@@ -76,12 +89,13 @@ th{font-size:11px;letter-spacing:.04em;color:#777;text-transform:uppercase}
   <form class="flex" method="get" action="{{ url_for('daily_admin') }}">
     <div><label for="date">Filter delivery date</label><input type="date" name="date" id="date" value="{{ selected }}"></div><button class="secondary" type="submit">Show orders</button>
   </form>
+  {% endif %}
   <div class="table-wrap"><table><thead>
     <tr><th>Slot / Flat</th><th>Customer</th><th>Juice / Portions</th><th>Payment</th><th>Status / Delete</th></tr>
   </thead><tbody>
     {% for order in rows %}
     <tr>
-      <td><strong>{{ slots[order.delivery_slot] }}</strong><br>{{ order.building_flat }}<br><small>{{ order.order_ref }}</small></td>
+      <td><strong>{{ slots[order.delivery_slot] }}</strong><br>{{ order.building_flat }}<br><small>{{ order.order_ref }} · {{ order.service_date }}</small></td>
       <td><strong>{{ order.name or 'Unrecorded' }}</strong><br>{{ order.phone or 'Legacy order' }}</td>
       <td>{{ order.juice }} · {{ order.portions }} × ₹{{ order.unit_price }}<br><strong>₹{{ order.total_price }}</strong></td>
       <td>
@@ -96,6 +110,13 @@ th{font-size:11px;letter-spacing:.04em;color:#777;text-transform:uppercase}
       {% endif %}
       </td>
       <td>
+        {% if view=='archived' %}
+        <form class="action-form" method="post" action="{{ url_for('daily_restore_order',order_ref=order.order_ref) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf }}">
+          <input type="hidden" name="date" value="{{ order.service_date }}">
+          <button class="secondary" type="submit">Restore to active list</button>
+        </form>
+        {% else %}
         <form class="action-form" method="post" action="{{ url_for('daily_update_status',order_ref=order.order_ref) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf }}"><input type="hidden" name="date" value="{{ selected }}">
           <select name="status">{% for status in statuses %}<option value="{{ status }}" {% if order.status==status %}selected{% endif %}>{{ status|title }}</option>{% endfor %}</select>
@@ -109,11 +130,12 @@ th{font-size:11px;letter-spacing:.04em;color:#777;text-transform:uppercase}
           <button class="danger" type="submit">Delete order</button>
         </form>
         {% endif %}
+        {% endif %}
       </td>
     </tr>
-    {% else %}<tr><td colspan="5">No orders for this delivery date.</td></tr>{% endfor %}
+    {% else %}<tr><td colspan="5">No {{ 'archived' if view=='archived' else 'active' }} orders here.</td></tr>{% endfor %}
   </tbody></table></div>
-  <p class="tip">Delete hides only new unpaid orders and frees a booking place. Paid, prepared and delivered orders remain protected. Deleted records are retained for audit.</p>
+  <p class="tip">Clear old orders moves past delivery dates into Archived orders without deleting payment or customer history. Individual Delete remains available only for new, unpaid orders.</p>
 </section>
 <section class="box">
   <h2>Customer-wise summary</h2>

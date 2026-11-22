@@ -84,6 +84,8 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
             ("customer_id", "INTEGER"),
             ("deleted_at", "TEXT"),
             ("deleted_reason", "TEXT"),
+            ("archived_at", "TEXT"),
+            ("archived_reason", "TEXT NOT NULL DEFAULT ''"),
         ):
             if col not in columns:
                 con.execute(f"ALTER TABLE daily_orders ADD COLUMN {col} {specification}")
@@ -110,6 +112,7 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
         con.execute("CREATE INDEX IF NOT EXISTS daily_orders_date_idx ON daily_orders(service_date)")
         con.execute("CREATE INDEX IF NOT EXISTS daily_orders_customer_idx ON daily_orders(customer_id)")
         con.execute("CREATE INDEX IF NOT EXISTS daily_orders_phone_idx ON daily_orders(phone)")
+        con.execute("CREATE INDEX IF NOT EXISTS daily_orders_archive_idx ON daily_orders(archived_at, service_date)")
 
     def menus_for_dates(days=None):
         dates = days or service_days()
@@ -329,9 +332,14 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
             "am": f'{order["total_price"]:.2f}', "cu": "INR",
             "tr": order_ref, "tn": "PureFruit " + order_ref
         }
+        query = urlencode(params)
         response = app.make_response(render_template(
             "daily_thanks.html", order=order, slots=SLOTS,
-            upi_link="upi://pay?" + urlencode(params)
+            upi_link="upi://pay?" + query,
+            phonepe_link="phonepe://pay?" + query,
+            phonepe_ios_link="phonepe://upi/pay?" + query,
+            gpay_link="tez://upi/pay?" + query,
+            payment_address=upi_payee_address,
         ))
         response.headers["Cache-Control"] = "private, no-store"
         return response
@@ -367,11 +375,23 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
             selected = date.fromisoformat(selected).isoformat()
         except ValueError:
             selected = default_day.isoformat()
+        view = request.args.get("view", "active")
+        if view not in ("active", "archived"):
+            view = "active"
         with get_db() as con:
-            rows = [dict(r) for r in con.execute(
-                """SELECT * FROM daily_orders WHERE service_date=? AND deleted_at IS NULL
-                   ORDER BY CASE delivery_slot WHEN 'morning' THEN 0 ELSE 1 END,
-                   building_flat COLLATE NOCASE, id""", (selected,))]
+            if view == "archived":
+                rows = [dict(r) for r in con.execute(
+                    """SELECT * FROM daily_orders WHERE archived_at IS NOT NULL
+                       AND deleted_at IS NULL ORDER BY service_date DESC, id DESC LIMIT 300""")]
+            else:
+                rows = [dict(r) for r in con.execute(
+                    """SELECT * FROM daily_orders WHERE service_date=? AND deleted_at IS NULL
+                       AND archived_at IS NULL
+                       ORDER BY CASE delivery_slot WHEN 'morning' THEN 0 ELSE 1 END,
+                       building_flat COLLATE NOCASE, id""", (selected,))]
+            archived_count = con.execute(
+                "SELECT COUNT(*) FROM daily_orders WHERE archived_at IS NOT NULL AND deleted_at IS NULL"
+            ).fetchone()[0]
             customer_rows = [dict(r) for r in con.execute("""
                 SELECT c.name, c.phone,
                     COUNT(o.id) AS orders, COALESCE(SUM(o.portions),0) AS portions,
@@ -408,6 +428,7 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
             "daily_admin.html", csrf=csrf_token(), menu=menu, juices=JUICES,
             slots=SLOTS, statuses=STATUSES, rows=rows, customers=customer_rows,
             stats=stats, selected=selected, today=today.isoformat(), upcoming=upcoming,
+            view=view, archived_count=archived_count,
             limit=MAX_DAILY_ORDERS, public_url=url_for("daily_order_page", _external=True)
         )
 
@@ -496,6 +517,42 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
                    status='cancelled',updated_at=? WHERE order_ref=?""",
                 (stamp, stamp, order_ref))
         flash("Order deleted from active list. An audit record is retained.", "success")
+        return redirect(url_for("daily_admin", date=request.form.get("date", "")))
+
+    @app.post("/staff/daily/archive-old")
+    @staff_only
+    def daily_archive_old():
+        """Clear older orders from the active list, retaining paid/transaction records."""
+        require_csrf()
+        if request.form.get("confirm_archive") != "yes":
+            abort(400, description="Explicit confirmation is required.")
+        stamp = now_ist().isoformat(timespec="seconds")
+        with get_db() as con:
+            result = con.execute(
+                """UPDATE daily_orders
+                   SET archived_at=?, archived_reason='Past delivery date',
+                       updated_at=?
+                   WHERE service_date<? AND archived_at IS NULL AND deleted_at IS NULL""",
+                (stamp, stamp, now_ist().date().isoformat()),
+            )
+        flash(f"{result.rowcount} past order(s) cleared from active lists. All records were retained.", "success")
+        return redirect(url_for("daily_admin"))
+
+    @app.post("/staff/daily/order/<order_ref>/restore")
+    @staff_only
+    def daily_restore_order(order_ref):
+        require_csrf()
+        stamp = now_ist().isoformat(timespec="seconds")
+        with get_db() as con:
+            result = con.execute(
+                """UPDATE daily_orders SET archived_at=NULL,archived_reason='',
+                   updated_at=? WHERE order_ref=? AND archived_at IS NOT NULL
+                   AND deleted_at IS NULL""",
+                (stamp, order_ref),
+            )
+        if not result.rowcount:
+            abort(404)
+        flash("Order restored to its delivery date list.", "success")
         return redirect(url_for("daily_admin", date=request.form.get("date", "")))
 
     @app.get("/staff/daily.csv")

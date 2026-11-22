@@ -152,6 +152,51 @@ class DailyOrdersTest(unittest.TestCase):
         with app_module.get_db() as con:
             self.assertEqual(con.execute("SELECT COUNT(*) FROM daily_orders WHERE deleted_at IS NOT NULL").fetchone()[0], 0)
 
+    def test_archive_old_orders_preserves_paid_history_and_restore(self):
+        self.seed_orders(2)
+        prior = (app_module.now_ist().date() - timedelta(days=1)).isoformat()
+        with app_module.get_db() as con:
+            con.execute("UPDATE daily_orders SET service_date=?,payment_status='paid',payment_method='upi',paid_at=? WHERE order_ref='TEST-0'",
+                        (prior, "2026-11-20T12:00:00"))
+        csrf = self.staff_login()
+        no_confirm = self.client.post("/staff/daily/archive-old", data={"csrf_token": csrf})
+        self.assertEqual(no_confirm.status_code, 400)
+        archived = self.client.post("/staff/daily/archive-old",
+            data={"csrf_token": csrf, "confirm_archive": "yes"})
+        self.assertEqual(archived.status_code, 302)
+        with app_module.get_db() as con:
+            prior_row = con.execute("SELECT archived_at,payment_status,paid_at,deleted_at FROM daily_orders WHERE order_ref='TEST-0'").fetchone()
+            current_row = con.execute("SELECT archived_at FROM daily_orders WHERE order_ref='TEST-1'").fetchone()
+        self.assertIsNotNone(prior_row["archived_at"])
+        self.assertEqual(prior_row["payment_status"], "paid")
+        self.assertIsNotNone(prior_row["paid_at"])
+        self.assertIsNone(prior_row["deleted_at"])
+        self.assertIsNone(current_row["archived_at"])
+        self.assertIn(b"TEST-0", self.client.get("/staff?view=archived").data)
+        self.assertNotIn(b"TEST-0", self.client.get("/staff?date="+prior).data)
+        restored = self.client.post("/staff/daily/order/TEST-0/restore",
+            data={"csrf_token": csrf, "date": prior})
+        self.assertEqual(restored.status_code, 302)
+        with app_module.get_db() as con:
+            self.assertIsNone(con.execute("SELECT archived_at FROM daily_orders WHERE order_ref='TEST-0'").fetchone()[0])
+
+    def test_new_upi_recipient_and_phonepe_gpay_links(self):
+        self.open_menu()
+        order = self.client.post("/", data=self.form_fields(), follow_redirects=False)
+        self.assertEqual(order.status_code, 303)
+        self.assertEqual(app_module.UPI_PAYEE_ADDRESS, "9619140077-huf@ybl")
+        page = self.client.get(order.headers["Location"])
+        self.assertEqual(page.status_code, 200)
+        self.assertIn(b"9619140077-huf@ybl", page.data)
+        self.assertIn(b"upi://pay?pa=9619140077-huf%40ybl", page.data)
+        self.assertIn(b"phonepe://pay?pa=9619140077-huf%40ybl", page.data)
+        self.assertIn(b"tez://upi/pay?pa=9619140077-huf%40ybl", page.data)
+        self.assertIn(b"Payment is <strong>not yet verified</strong>", page.data)
+        ref = order.headers["Location"].rsplit("/", 1)[-1]
+        qr = self.client.get("/daily/qr/"+ref+".png")
+        self.assertEqual(qr.status_code, 200)
+        self.assertEqual(qr.content_type, "image/png")
+
     def test_mobile_and_name_are_required(self):
         self.open_menu()
         fields = self.form_fields()

@@ -43,10 +43,11 @@ RAZORPAY_WEBHOOK_SECRET = os.getenv("RAZORPAY_WEBHOOK_SECRET", "").strip()
 RAZORPAY_API = "https://api.razorpay.com/v1"
 PAYMENTS_READY = bool(RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET and RAZORPAY_WEBHOOK_SECRET)
 PAYMENT_MODE = os.getenv("PAYMENT_MODE", "upi_qr").strip().lower()
-# Recipient data decoded from the PhonePe QR supplied by the merchant. These are
-# public payee identifiers, not login credentials or payment-gateway secrets.
-UPI_PAYEE_ADDRESS = os.getenv("UPI_PAYEE_ADDRESS", "9619140077-gsb@ibl").strip()
-UPI_PAYEE_NAME = os.getenv("UPI_PAYEE_NAME", "GREENRISE BUZZ PRIVATE LIMITED").strip()
+# Current recipient specified by PureFruit. Keep this in source so an older
+# Railway UPI_PAYEE_ADDRESS environment variable cannot redirect daily payments.
+# Displayed bank-verified beneficiary name must still be checked in the UPI app.
+UPI_PAYEE_ADDRESS = "9619140077-huf@ybl"
+UPI_PAYEE_NAME = "PureFruit"
 UPI_PAYEE_MCC = os.getenv("UPI_PAYEE_MCC", "0000").strip()
 LAUNCH_DATE = date(2026, 11, 6)
 PLANS = {5: 599, 10: 1099, 20: 1999}  # Regular rupee prices

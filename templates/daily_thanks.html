@@ -6,6 +6,10 @@ main{width:min(430px,calc(100% - 30px));margin:34px auto}.logo{font:700 34px Geo
 h1{font:700 27px Georgia,serif;margin:8px 0}.muted{color:#717171;font-size:13px}.ref{font-weight:700;letter-spacing:.3px}.line{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #eee;padding:10px 0;font-size:14px}.line strong{text-align:right}
 .amount{font-size:26px;font-weight:700;margin:10px 0}a.pay{display:block;text-align:center;background:#252525;color:#fff;padding:14px;border-radius:9px;text-decoration:none;font-weight:700}
 img{display:block;max-width:230px;width:100%;margin:15px auto}
+.app-options{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:9px 0 15px}
+.app-options a{display:block;padding:12px 9px;border:1px solid #d4d4d1;border-radius:9px;text-decoration:none;text-align:center;color:#292929;font-weight:700;background:#f8f8f6;font-size:14px}
+.recipient{font-size:13px;color:#555;background:#f6f6f4;border:1px solid #e9e9e4;padding:11px 12px;border-radius:8px;margin:11px 0}
+
 .note{font-size:12px;color:#666;margin:15px 0 0}.ok{display:inline-block;background:#eaf6ed;color:#206437;border-radius:12px;padding:4px 10px;font-size:12px;font-weight:700}
 </style></head><body><main><div class="logo">PureFruit</div><section class="card">
 <span class="ok">Order request saved</span>
@@ -23,8 +27,22 @@ img{display:block;max-width:230px;width:100%;margin:15px auto}
 {% else %}
 <h2 style="font-size:18px;margin:20px 0 6px">Pay using UPI</h2>
 <p class="amount">₹{{ order.total_price }}</p>
-<a class="pay" href="{{ upi_link }}">Pay with UPI App</a>
+<div class="recipient">Pay to UPI ID: <strong>{{ payment_address }}</strong><br>Confirm the receiver's verified name in your payment app before authorizing.</div>
+<a class="pay" href="{{ upi_link }}">Pay by any UPI app</a>
+<div class="app-options">
+  <a id="phonepe-pay" href="{{ phonepe_link }}" data-ios-link="{{ phonepe_ios_link }}">Open PhonePe</a>
+  <a href="{{ gpay_link }}">Open Google Pay</a>
+</div>
+<p class="note">App buttons work only where the payment app and your browser support UPI deep links. If they don't open, use the QR below from PhonePe or Google Pay.</p>
 <img src="{{ url_for('daily_payment_qr', order_ref=order.order_ref) }}" alt="UPI QR for your order">
 <p class="note">Use the amount and order reference above. Staff will confirm payment after checking the actual bank credit. A successful UPI app screen is not automatic confirmation.</p>
+<script>
+(function(){
+  if (/iPad|iPhone|iPod/i.test(navigator.userAgent)){
+    var button=document.getElementById('phonepe-pay');
+    if(button)button.href=button.dataset.iosLink;
+  }
+})();
+</script>
 {% endif %}
 </section></main></body></html>
