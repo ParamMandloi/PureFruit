@@ -121,7 +121,7 @@ class DailyOrdersTest(unittest.TestCase):
         with app_module.get_db() as con:
             self.assertEqual(con.execute("SELECT COUNT(*) FROM daily_orders").fetchone()[0], 1)
 
-    def test_10_orders_per_delivery_date_cap_and_delete(self):
+    def test_1000_orders_per_delivery_date_cap_and_delete(self):
         self.open_menu()
         fields = self.form_fields()
         self.seed_orders(MAX_DAILY_ORDERS)
@@ -130,7 +130,7 @@ class DailyOrdersTest(unittest.TestCase):
         closed = self.client.get("/")
         self.assertIn(b"Ordering is currently closed", closed.data)
         with app_module.get_db() as con:
-            self.assertEqual(con.execute("SELECT COUNT(*) FROM daily_orders").fetchone()[0], 10)
+            self.assertEqual(con.execute("SELECT COUNT(*) FROM daily_orders").fetchone()[0], 1000)
         csrf = self.staff_login()
         removed = self.client.post("/staff/daily/order/TEST-0/delete",
             data={"csrf_token": csrf, "confirm_ref": "TEST-0", "date": self.service_date})
@@ -181,7 +181,7 @@ class DailyOrdersTest(unittest.TestCase):
         with app_module.get_db() as con:
             self.assertIsNone(con.execute("SELECT archived_at FROM daily_orders WHERE order_ref='TEST-0'").fetchone()[0])
 
-    def test_restored_old_phonepe_gpay_buttons_and_manual_fallback(self):
+    def test_no_payment_app_buttons_and_manual_fallback(self):
         self.open_menu()
         order = self.client.post("/", data=self.form_fields(), follow_redirects=False)
         self.assertEqual(order.status_code, 303)
@@ -195,19 +195,14 @@ class DailyOrdersTest(unittest.TestCase):
         self.assertIn(b"Open QR image to save", page.data)
         self.assertIn(b"Order confirmed", page.data)
         self.assertIn(b"I've made payment", page.data)
-        # The direct HUF UPI intent was rejected by payment apps.
-        # Launch the app and copy the verified mobile payee number instead.
-        self.assertIn("Pay ₹297 with PhonePe".encode("utf-8"), page.data)
-        self.assertIn(b"Open Google Pay", page.data)
+        # The customer requested no PhonePe or Google Pay buttons.
+        self.assertNotIn(b'id="upi-phonepe"', page.data)
+        self.assertNotIn(b'id="upi-gpay"', page.data)
         self.assertIn(b"Recommended: Pay to mobile number", page.data)
         self.assertIn(b"9619140077", page.data)
         self.assertIn(b"Copy number", page.data)
         self.assertIn(b"QR amount: ", page.data)
-        self.assertIn(b'href="phonepe://pay?pa=9619140077-huf%40ybl', page.data)
-        self.assertIn(b"am=297.00", page.data)
-        self.assertIn(b'href="tez://"', page.data)
-        self.assertNotIn(b"tr=", page.data)
-        self.assertNotIn(b"mode=04", page.data)
+        self.assertNotIn(b"phonepe://pay?", page.data)
         self.assertNotIn(b"tez://upi/pay?", page.data)
         self.assertNotIn(b'href="upi://pay?', page.data)
         self.assertNotIn(b"wa.me/", page.data)
@@ -226,7 +221,7 @@ class DailyOrdersTest(unittest.TestCase):
 
     def test_amount_matches_portions_in_db_page_and_qr(self):
         self.open_menu()
-        for qty in (1, 2, 5, 10, 30):
+        for qty in (1, 2, 5, 10):
             with self.subTest(qty=qty):
                 fields = self.form_fields()
                 fields["portions"] = str(qty)
@@ -259,6 +254,28 @@ class DailyOrdersTest(unittest.TestCase):
                 self.assertNotIn("tr=", phonepe)
                 self.assertNotIn("mode=", phonepe)
                 self.assertIn(phonepe.replace("&", "&amp;").encode("utf-8"), page.data)
+
+    def test_limit_is_1000_orders_and_10_portions(self):
+        self.assertEqual(MAX_DAILY_ORDERS, 1000)
+        self.open_menu()
+        form = self.client.get("/")
+        self.assertIn(b'max="10"', form.data)
+        self.assertIn(b"Maximum 10 portions per order", form.data)
+        self.assertIn(b"Math.min(10,", form.data)
+        for invalid in ("0", "11", "30", "100"):
+            fields = self.form_fields()
+            fields["portions"] = invalid
+            response = self.client.post("/", data=fields)
+            self.assertEqual(response.status_code, 400)
+        fields = self.form_fields()
+        fields["portions"] = "10"
+        response = self.client.post("/", data=fields, follow_redirects=False)
+        self.assertEqual(response.status_code, 303)
+        ref = response.headers["Location"].rsplit("/", 1)[-1]
+        with app_module.get_db() as con:
+            row = con.execute("SELECT portions,total_price FROM daily_orders WHERE order_ref=?", (ref,)).fetchone()
+            self.assertEqual(row["portions"], 10)
+            self.assertEqual(row["total_price"], 990)
 
     def test_amount_respects_price_saved_at_order_time(self):
         self.open_menu()

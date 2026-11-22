@@ -24,7 +24,7 @@ JUICES = {
 }
 SLOTS = {"morning": "8–9 AM", "afternoon": "4–5 PM"}
 STATUSES = ("new", "preparing", "delivered", "cancelled")
-MAX_DAILY_ORDERS = 10
+MAX_DAILY_ORDERS = 1000
 COOKIE_NAME = "purefruit_daily_device"
 COOKIE_AGE = 180 * 24 * 3600
 
@@ -96,7 +96,7 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             order_ref TEXT NOT NULL UNIQUE, nonce TEXT NOT NULL UNIQUE,
             created_at TEXT NOT NULL, service_date TEXT NOT NULL,
-            juice TEXT NOT NULL, portions INTEGER NOT NULL CHECK(portions BETWEEN 1 AND 30),
+            juice TEXT NOT NULL, portions INTEGER NOT NULL CHECK(portions BETWEEN 1 AND 10),
             unit_price INTEGER NOT NULL, total_price INTEGER NOT NULL,
             delivery_slot TEXT NOT NULL, building_flat TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'new',
@@ -255,7 +255,7 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
         if len(phone) == 12 and phone.startswith("91"):
             phone = phone[2:]
         if (not re.fullmatch(r"[1-9][0-9]?", raw_qty) or
-                not 1 <= int(raw_qty) <= 30 or not 3 <= len(location) <= 80 or
+                not 1 <= int(raw_qty) <= 10 or not 3 <= len(location) <= 80 or
                 not 2 <= len(name) <= 70 or not re.fullmatch(r"[6-9][0-9]{9}", phone)):
             return render_form("Enter valid portions, name, 10-digit mobile, and building / flat.", 400)
 
@@ -362,8 +362,6 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
             "daily_thanks.html", order=order, slots=SLOTS,
             csrf=csrf_token(), payment_address=upi_payee_address,
             pay_mobile_number="9619140077",
-            phonepe_link=build_phonepe_payment_uri(
-                upi_payee_address, upi_payee_name, order),
         ))
         response.headers["Cache-Control"] = "private, no-store"
         return response

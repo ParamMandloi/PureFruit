@@ -6,10 +6,6 @@ main{width:min(430px,calc(100% - 30px));margin:34px auto}.logo{font:700 34px Geo
 h1{font:700 27px Georgia,serif;margin:8px 0}.muted{color:#717171;font-size:13px}.ref{font-weight:700;letter-spacing:.3px}.line{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #eee;padding:10px 0;font-size:14px}.line strong{text-align:right}
 .amount{font-size:26px;font-weight:700;margin:10px 0}a.pay{display:block;text-align:center;background:#252525;color:#fff;padding:14px;border-radius:9px;text-decoration:none;font-weight:700}
 img{display:block;max-width:230px;width:100%;margin:15px auto}
-.app-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0 10px}
-.app-options a{display:flex;justify-content:center;align-items:center;text-align:center;min-height:50px;padding:11px 8px;background:#262626;border:1px solid #262626;color:#fff;border-radius:9px;text-decoration:none;font-weight:700;font-size:14px;line-height:1.3}
-.app-options a:focus-visible{outline:3px solid #7da0d0;outline-offset:2px}
-@media(min-width:760px){.app-options a{font-size:15px}}
 .recipient{font-size:13px;color:#555;background:#f6f6f4;border:1px solid #e9e9e4;padding:11px 12px;border-radius:8px;margin:11px 0}
 .optional{border-top:1px solid #ededeb;margin-top:22px;padding-top:17px}.success{background:#e8f5ea;border:1px solid #cce6d2;padding:15px;border-radius:10px;color:#1c5931;margin:14px 0;font-size:14px}
 .confirmed{font-weight:700;color:#226039;font-size:16px}.report{width:100%;background:#28653b;color:white;font-size:16px;font-weight:700;font-family:inherit;border:0;border-radius:9px;min-height:47px;cursor:pointer;margin-top:16px}
@@ -48,11 +44,6 @@ img{display:block;max-width:230px;width:100%;margin:15px auto}
     <small>Amount to enter: <strong>₹<span id="upi-amount">{{ order.total_price }}</span></strong> <button id="copy-amount" type="button">Copy amount</button></small>
     <small>The number has been tested for receipt into the intended PureFruit account. Always confirm the recipient displayed by your UPI app.</small>
   </div>
-  <div class="app-options" aria-label="Open UPI payment app to pay by mobile number">
-    <a id="upi-phonepe" href="{{ phonepe_link }}">Pay ₹{{ order.total_price }} with PhonePe</a>
-    <a id="upi-gpay" href="tez://" data-mobile-launch="true">Open Google Pay</a>
-  </div>
-  <p class="note" id="app-instructions"><strong>PhonePe</strong> opens a payment request to <strong>{{ payment_address }}</strong> with <strong>₹{{ order.total_price }}</strong> prefilled; confirm the receiver before authorising. <strong>Google Pay</strong> opens the app for manual payment to <strong>{{ pay_mobile_number }}</strong>. If PhonePe declines the UPI-ID request, use the tested mobile-number route instead.</p>
   <div class="recipient">UPI ID: <strong id="upi-address">{{ payment_address }}</strong>
     <button class="copy" id="copy-upi" type="button" aria-label="Copy PureFruit UPI ID">Copy UPI ID</button>
     <br><small>Bank-registered recipient: PARAMPRAKASH RAJENDRA MANDLOI KARTA</small>
@@ -61,7 +52,7 @@ img{display:block;max-width:230px;width:100%;margin:15px auto}
   <div class="instructions">
     <strong>Alternatively, pay manually (UPI ID or QR)</strong>
     <ol>
-      <li>If the app-launch button does not open your payment app, open PhonePe or Google Pay manually.</li>
+      <li>Open PhonePe or Google Pay manually.</li>
       <li>Select <strong>Pay to UPI ID</strong> and paste the copied ID, or scan the QR below from inside the app.</li>
       <li>Check that the order amount is <strong>₹{{ order.total_price }}</strong> and verify the bank-registered recipient before paying.</li>
     </ol>
@@ -97,17 +88,6 @@ img{display:block;max-width:230px;width:100%;margin:15px auto}
   copyValue('copy-upi','upi-address','Copy UPI ID');
   copyValue('copy-mobile','upi-mobile','Copy mobile number');
   copyValue('copy-amount','upi-amount','Copy payment amount');
-  // The app buttons are app-launch shortcuts, not payment requests. Copy
-  // the verified recipient phone number during the user's tap. The app may
-  // reject the custom launch scheme on some browsers; manual copy remains.
-  document.querySelectorAll('[data-mobile-launch="true"]').forEach(function(link){
-    link.addEventListener('click',function(){
-      var value=document.getElementById('upi-mobile');
-      if(value && navigator.clipboard && navigator.clipboard.writeText){
-        navigator.clipboard.writeText(value.textContent.trim()).catch(function(){});
-      }
-    });
-  });
 })();
 </script>
 </section></main></body></html>

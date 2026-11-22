@@ -63,7 +63,7 @@ input[type=text],input[type=tel]{width:100%;min-height:42px;border:1px solid #d6
         <label class="field" for="portions">Number of portions</label>
         <div class="qty">
           <button type="button" id="minus" aria-label="Remove one portion">−</button>
-          <input id="portions" type="number" name="portions" value="1" min="1" max="30" required inputmode="numeric">
+          <input id="portions" type="number" name="portions" value="1" min="1" max="10" required inputmode="numeric">
           <button type="button" id="plus" aria-label="Add one portion">+</button>
         </div>
         <label class="field">Delivery date &amp; slot</label>
@@ -78,7 +78,7 @@ input[type=text],input[type=tel]{width:100%;min-height:42px;border:1px solid #d6
           </label>
           {% endfor %}
         </div>
-        <p class="hint">After 9 AM: evening or next service day. After 5 PM: next service day only. Maximum {{ limit }} orders per delivery date.</p>
+        <p class="hint">After 9 AM: evening or next service day. After 5 PM: next service day only. Maximum 10 portions per order.</p>
         <label class="field" for="building_flat">Building / Flat</label>
         <input type="text" name="building_flat" id="building_flat" minlength="3" maxlength="80" required placeholder="e.g. Tower B / 1204">
         {% if customer %}
@@ -120,7 +120,7 @@ const form=document.getElementById('order-form');if(!form)return;
 const qty=document.getElementById('portions'),count=document.getElementById('count'),total=document.getElementById('total');
 const options=[...form.querySelectorAll('input[name="delivery_option"]')];
 let price=Number(options[0]?.dataset.price||99);
-function refresh(){const n=Math.min(30,Math.max(1,Number.parseInt(qty.value,10)||1));qty.value=n;count.textContent=n;total.textContent='₹'+(n*price).toLocaleString('en-IN');}
+function refresh(){const n=Math.min(10,Math.max(1,Number.parseInt(qty.value,10)||1));qty.value=n;count.textContent=n;total.textContent='₹'+(n*price).toLocaleString('en-IN');}
 function selectOption(){
 const selected=options.find(x=>x.checked);if(!selected)return;
 price=Number(selected.dataset.price);
@@ -130,7 +130,7 @@ const img=document.getElementById('fruit-image');img.src=selected.dataset.image;
 refresh();}
 options.forEach(x=>x.addEventListener('change',selectOption));
 document.getElementById('minus').addEventListener('click',()=>{qty.value=Math.max(1,Number(qty.value||1)-1);refresh();});
-document.getElementById('plus').addEventListener('click',()=>{qty.value=Math.min(30,Number(qty.value||1)+1);refresh();});
+document.getElementById('plus').addEventListener('click',()=>{qty.value=Math.min(10,Number(qty.value||1)+1);refresh();});
 qty.addEventListener('change',refresh);selectOption();
 const edit=document.getElementById('edit-details');
 if(edit)edit.addEventListener('click',()=>{document.getElementById('saved-details').hidden=true;document.getElementById('customer-details').hidden=false;document.getElementById('customer_name').focus();});
