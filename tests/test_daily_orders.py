@@ -35,7 +35,7 @@ class DailyOrdersTest(unittest.TestCase):
             con.execute("UPDATE daily_menu SET service_date=? WHERE id=1", (d.isoformat(),))
 
     def form_fields(self):
-        page = self.client.get("/daily")
+        page = self.client.get("/")
         self.assertEqual(page.status_code, 200)
         with self.client.session_transaction() as s:
             return {"csrf_token": s["csrf_token"], "nonce": s["daily_nonce"]}
@@ -43,7 +43,7 @@ class DailyOrdersTest(unittest.TestCase):
     def test_closed_form_cannot_submit(self):
         data = self.form_fields()
         data.update(portions="2", delivery_slot="morning", building_flat="B / 1204")
-        response = self.client.post("/daily", data=data)
+        response = self.client.post("/", data=data)
         self.assertEqual(response.status_code, 400)
 
     def test_place_order_without_phone_or_name_and_no_duplicate(self):
@@ -51,7 +51,7 @@ class DailyOrdersTest(unittest.TestCase):
             con.execute("UPDATE daily_menu SET is_open=1 WHERE id=1")
         data = self.form_fields()
         data.update(portions="3", delivery_slot="afternoon", building_flat="Tower B / 1204")
-        response = self.client.post("/daily", data=data, follow_redirects=False)
+        response = self.client.post("/", data=data, follow_redirects=False)
         self.assertEqual(response.status_code, 303)
         self.assertIn("/daily/thanks/", response.headers["Location"])
         with app_module.get_db() as con:
@@ -69,6 +69,23 @@ class DailyOrdersTest(unittest.TestCase):
         thanks = self.client.get(response.headers["Location"])
         self.assertIn(b"Order request saved", thanks.data)
         self.assertIn(b"not yet verified", thanks.data)
+
+    def test_main_routes_use_daily_checkout(self):
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Portions", response.data)
+        self.assertIn(b"Building / Flat", response.data)
+        legacy = self.client.get("/subscriptions")
+        self.assertEqual(legacy.status_code, 200)
+
+    def test_staff_home_is_daily_dashboard(self):
+        with self.client.session_transaction() as sess:
+            sess["staff_logged_in"] = True
+        dashboard = self.client.get("/staff")
+        self.assertEqual(dashboard.status_code, 200)
+        self.assertIn(b"Daily Orders", dashboard.data)
+        subscriptions = self.client.get("/staff/subscriptions")
+        self.assertEqual(subscriptions.status_code, 200)
 
     def test_staff_menu_requires_login_and_csrf(self):
         response = self.client.post("/staff/daily/menu", data={"juice": "ABC"})
