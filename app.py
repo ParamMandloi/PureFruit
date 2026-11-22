@@ -387,7 +387,7 @@ def security_headers(response):
     return response
 
 
-@app.get("/")
+@app.get("/subscriptions")
 def index():
     return render_template(
         "index.html", csrf=csrf_token(), min_start=next_available_day().isoformat(),
@@ -855,7 +855,7 @@ def telegram_test():
 def staff_logout():
     require_csrf()
     session.clear()
-    return redirect(url_for("index"))
+    return redirect(url_for("daily_order_page"))
 
 
 def all_orders():
@@ -870,7 +870,7 @@ def safe_date(value):
         return now_ist().date()
 
 
-@app.get("/staff")
+@app.get("/staff/subscriptions")
 @staff_only
 def staff_dashboard():
     orders = all_orders()
