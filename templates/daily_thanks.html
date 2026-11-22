@@ -46,13 +46,13 @@ img{display:block;max-width:230px;width:100%;margin:15px auto}
     <button id="copy-mobile" type="button">Copy number</button>
     <small>Open PhonePe or Google Pay → Pay to mobile number → paste the number → enter <strong>₹{{ order.total_price }}</strong>.</small>
     <small>Amount to enter: <strong>₹<span id="upi-amount">{{ order.total_price }}</span></strong> <button id="copy-amount" type="button">Copy amount</button></small>
-    <small>Before paying, confirm that the recipient and receiving account are the ones intended for PureFruit. A mobile payment may reach a different UPI-linked account than the HUF ID.</small>
+    <small>The number has been tested for receipt into the intended PureFruit account. Always confirm the recipient displayed by your UPI app.</small>
   </div>
   <div class="app-options" aria-label="Open UPI payment app to pay by mobile number">
-    <a id="upi-phonepe" href="phonepe://native" data-mobile-launch="true">Open PhonePe</a>
+    <a id="upi-phonepe" href="{{ phonepe_link }}">Pay ₹{{ order.total_price }} with PhonePe</a>
     <a id="upi-gpay" href="tez://" data-mobile-launch="true">Open Google Pay</a>
   </div>
-  <p class="note" id="app-instructions">These buttons try to open your chosen UPI app and copy the mobile number. In the app, select <strong>Pay to mobile number</strong>, paste <strong>9619140077</strong> and enter <strong>₹{{ order.total_price }}</strong>. They do not start a payment to the HUF UPI ID. If an app does not open, use the Copy Number button and open the app normally.</p>
+  <p class="note" id="app-instructions"><strong>PhonePe</strong> opens a payment request to <strong>{{ payment_address }}</strong> with <strong>₹{{ order.total_price }}</strong> prefilled; confirm the receiver before authorising. <strong>Google Pay</strong> opens the app for manual payment to <strong>{{ pay_mobile_number }}</strong>. If PhonePe declines the UPI-ID request, use the tested mobile-number route instead.</p>
   <div class="recipient">UPI ID: <strong id="upi-address">{{ payment_address }}</strong>
     <button class="copy" id="copy-upi" type="button" aria-label="Copy PureFruit UPI ID">Copy UPI ID</button>
     <br><small>Bank-registered recipient: PARAMPRAKASH RAJENDRA MANDLOI KARTA</small>

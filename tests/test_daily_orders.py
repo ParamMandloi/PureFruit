@@ -14,7 +14,7 @@ os.environ.pop("TELEGRAM_BOT_TOKEN", None)
 os.environ.pop("TELEGRAM_CHAT_ID", None)
 
 app_module = importlib.import_module("app")
-from daily_orders import MAX_DAILY_ORDERS, slots_for_date, build_order_qr_uri
+from daily_orders import MAX_DAILY_ORDERS, slots_for_date, build_order_qr_uri, build_phonepe_payment_uri
 
 app = app_module.app
 
@@ -197,15 +197,17 @@ class DailyOrdersTest(unittest.TestCase):
         self.assertIn(b"I've made payment", page.data)
         # The direct HUF UPI intent was rejected by payment apps.
         # Launch the app and copy the verified mobile payee number instead.
-        self.assertIn(b"Open PhonePe", page.data)
+        self.assertIn("Pay ₹297 with PhonePe".encode("utf-8"), page.data)
         self.assertIn(b"Open Google Pay", page.data)
         self.assertIn(b"Recommended: Pay to mobile number", page.data)
         self.assertIn(b"9619140077", page.data)
         self.assertIn(b"Copy number", page.data)
         self.assertIn(b"QR amount: ", page.data)
-        self.assertIn(b'href="phonepe://native"', page.data)
+        self.assertIn(b'href="phonepe://pay?pa=9619140077-huf%40ybl', page.data)
+        self.assertIn(b"am=297.00", page.data)
         self.assertIn(b'href="tez://"', page.data)
-        self.assertNotIn(b"phonepe://pay?", page.data)
+        self.assertNotIn(b"tr=", page.data)
+        self.assertNotIn(b"mode=04", page.data)
         self.assertNotIn(b"tez://upi/pay?", page.data)
         self.assertNotIn(b'href="upi://pay?', page.data)
         self.assertNotIn(b"wa.me/", page.data)
@@ -248,6 +250,15 @@ class DailyOrdersTest(unittest.TestCase):
                     {"total_price": row["total_price"], "order_ref": ref},
                 )
                 self.assertIn(f"am={qty*99:.2f}", qr)
+                phonepe = build_phonepe_payment_uri(
+                    app_module.UPI_PAYEE_ADDRESS, app_module.UPI_PAYEE_NAME,
+                    {"total_price": row["total_price"], "order_ref": ref},
+                )
+                self.assertIn(f"am={qty*99:.2f}", phonepe)
+                self.assertIn("pa=9619140077-huf%40ybl", phonepe)
+                self.assertNotIn("tr=", phonepe)
+                self.assertNotIn("mode=", phonepe)
+                self.assertIn(phonepe.replace("&", "&amp;").encode("utf-8"), page.data)
 
     def test_amount_respects_price_saved_at_order_time(self):
         self.open_menu()
@@ -284,6 +295,18 @@ class DailyOrdersTest(unittest.TestCase):
             )
         self.assertIn(b'id="upi-amount">460</span>',
                       self.client.get(response.headers["Location"]).data)
+
+    def test_order_page_is_compact_with_persistent_checkout_and_large_slots(self):
+        self.open_menu()
+        page = self.client.get("/")
+        self.assertEqual(page.status_code, 200)
+        self.assertIn(b"height:76px", page.data)
+        self.assertIn(b"font-size:18px", page.data)
+        self.assertIn(b"class=\"slot-time\"", page.data)
+        self.assertIn(b"position:fixed", page.data)
+        self.assertIn(b'class="checkout-dock"', page.data)
+        self.assertIn(b'id="submit" type="submit">Place Order', page.data)
+        self.assertIn(b"Number of portions", page.data)
 
     def test_payment_made_reports_only_and_does_not_hold_delivery(self):
         self.open_menu()

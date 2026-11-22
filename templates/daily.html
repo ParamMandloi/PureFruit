@@ -7,30 +7,34 @@
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#f8f8f6;color:#292929;font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-.shell{max-width:450px;margin:16px auto 38px;padding:0 14px}
-.brand{font:700 35px Georgia,serif;letter-spacing:-1.1px;margin:0}.tagline{font-size:12px;color:#737373;margin:2px 0 17px}
+.shell{max-width:450px;margin:7px auto 24px;padding:0 10px}
+.brand{font:700 29px Georgia,serif;letter-spacing:-1.1px;margin:0}.tagline{font-size:11px;color:#737373;margin:0 0 9px}
 .card{background:#fff;border:1px solid #e5e5e1;border-radius:18px;overflow:hidden;box-shadow:0 8px 28px #00000006}
-.fruit-img{display:block;width:100%;height:160px;object-fit:contain;background:#f5f5f2;padding:10px}
-.inner{padding:19px}
+.fruit-img{display:block;width:100%;height:76px;object-fit:contain;background:#f5f5f2;padding:4px}
+.inner{padding:12px 14px}.inner.has-order{padding-bottom:100px}
 .eyebrow{font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:#777;font-weight:700}
-h1{font:700 26px Georgia,serif;margin:4px 0 6px}.price{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
+h1{font:700 23px Georgia,serif;margin:1px 0 2px}.price{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
 .price strong{font-size:23px;white-space:nowrap}.muted{color:#737373;font-size:12px}
-label.field{display:block;font-weight:650;font-size:13px;margin:17px 0 7px}
-.qty{display:flex;align-items:center;justify-content:space-between;border:1px solid #d7d7d4;border-radius:10px;height:48px;overflow:hidden}
+label.field{display:block;font-weight:650;font-size:13px;margin:9px 0 4px}
+.qty{display:flex;align-items:center;justify-content:space-between;border:1px solid #d7d7d4;border-radius:10px;height:42px;overflow:hidden}
 .qty button{height:100%;width:58px;border:0;background:#f5f5f3;font-size:24px;cursor:pointer}
 .qty input{border:0;outline:0;width:90px;text-align:center;font-size:20px;font-weight:700;appearance:textfield}
 .qty input::-webkit-inner-spin-button,.qty input::-webkit-outer-spin-button{appearance:none}
 .options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.options label{cursor:pointer}.options input{position:absolute;opacity:0}.options span{display:flex;min-height:76px;align-items:center;justify-content:center;flex-direction:column;gap:3px;padding:8px;border:1px solid #d8d8d5;border-radius:10px;text-align:center;font-size:12px}
-.options b{font-size:13px}.options input:checked+span{border-color:#232323;box-shadow:inset 0 0 0 1px #232323;background:#f3f3f1}
+.options label{cursor:pointer}.options input{position:absolute;opacity:0}.options .slot-card{display:flex;min-height:62px;align-items:center;justify-content:center;flex-direction:column;gap:1px;padding:5px;border:1px solid #d8d8d5;border-radius:10px;text-align:center;font-size:12px}
+.options .slot-name{font-size:11px;font-weight:650}
+.options .slot-time{font-size:18px;font-weight:800;letter-spacing:-.3px;line-height:1.24;color:#212121}
+.options input:checked+.slot-card{border-color:#232323;box-shadow:inset 0 0 0 1px #232323;background:#f3f3f1}
 .options input:focus-visible+span{outline:2px solid #777;outline-offset:2px}
-input[type=text],input[type=tel]{width:100%;min-height:46px;border:1px solid #d6d6d3;border-radius:9px;padding:10px 12px;font:inherit}
-.hint{margin-top:5px;font-size:11px;color:#777}
-.saved{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px;border:1px solid #dededb;border-radius:10px;background:#f5f5f3;font-size:13px}
+input[type=text],input[type=tel]{width:100%;min-height:42px;border:1px solid #d6d6d3;border-radius:9px;padding:10px 12px;font:inherit}
+.hint{margin:5px 0 2px;font-size:10px;color:#777}
+.saved{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px;border:1px solid #dededb;border-radius:10px;background:#f5f5f3;font-size:13px}
 .saved button{border:0;background:transparent;text-decoration:underline;cursor:pointer;font-size:12px;font-weight:700}
-.total{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #e5e5e2;margin:20px 0 12px;padding-top:14px}
-.total strong{font-size:24px}
-.submit{width:100%;padding:14px;background:#292929;border:0;border-radius:10px;color:#fff;font-weight:700;font-size:16px;cursor:pointer}
+.checkout-dock{position:fixed;inset:auto 0 0 0;z-index:20;background:rgba(255,255,255,.98);border-top:1px solid #e5e5e2;box-shadow:0 -5px 20px #0000000b;padding:9px 12px calc(9px + env(safe-area-inset-bottom))}
+.checkout-dock-inner{max-width:430px;margin:0 auto;display:flex;align-items:center;gap:12px;width:100%}
+.dock-total{flex:0 0 auto;min-width:96px;font-size:11px;color:#666;line-height:1.15}
+.dock-total strong{display:block;color:#202020;font-size:23px;margin-top:2px}
+.submit{flex:1;width:auto;min-height:49px;padding:11px 15px;background:#292929;border:0;border-radius:10px;color:#fff;font-weight:750;font-size:17px;cursor:pointer}
 .submit:disabled{opacity:.5}
 .note{font-size:12px;color:#747474;margin:11px 0 2px}.error{padding:12px;background:#fff1ed;color:#932f21;border-radius:8px;margin:12px 0}
 .closed{margin:18px 0 3px;padding:17px;border-radius:9px;background:#f2f2f0;color:#626262;font-size:14px}
@@ -44,7 +48,7 @@ input[type=text],input[type=tel]{width:100%;min-height:46px;border:1px solid #d6
   <p class="tagline">Healthier happier you · L&amp;T Serene County</p>
   <section class="card">
     <img id="fruit-image" class="fruit-img" src="{{ url_for('static',filename=image) if image else url_for('static',filename='fruit/purefruit-bottle.webp') }}" alt="{{ menu.juice }} juice">
-    <div class="inner">
+    <div class="inner {% if options %}has-order{% endif %}">
       <span class="eyebrow">FRESH COLD-PRESSED · 300 ML</span>
       <div class="price">
         <div><h1 id="juice-name">{{ menu.juice }} Juice</h1><div class="muted">No added sugar or water</div></div>
@@ -68,8 +72,8 @@ input[type=text],input[type=tel]{width:100%;min-height:46px;border:1px solid #d6
           <label><input type="radio" name="delivery_option" value="{{ option.value }}" {% if loop.first %}checked{% endif %}
               data-price="{{ option.unit_price }}" data-juice="{{ option.juice }}" data-image="{{ url_for('static',filename=option.image) }}"
               required>
-            <span><b>{{ option.heading }} · {{ 'Morning' if option.slot=='morning' else 'Evening' }}</b>
-              {{ option.slot_label }}{% if option.juice != menu.juice %}<small>{{ option.juice }}</small>{% endif %}
+            <span class="slot-card"><span class="slot-name">{{ option.heading }} · {{ 'Morning' if option.slot=='morning' else 'Evening' }}</span>
+              <span class="slot-time">{{ option.slot_label }}</span>{% if option.juice != menu.juice %}<small>{{ option.juice }}</small>{% endif %}
             </span>
           </label>
           {% endfor %}
@@ -90,8 +94,12 @@ input[type=text],input[type=tel]{width:100%;min-height:46px;border:1px solid #d6
           <input type="tel" name="customer_mobile" id="customer_mobile" minlength="10" maxlength="14" required inputmode="tel"
                  autocomplete="tel" value="{{ customer.phone if customer else '' }}" placeholder="10-digit mobile number">
         </div>
-        <div class="total"><span>Total · <span id="count">1</span> portion(s)</span><strong id="total">₹{{ menu.unit_price }}</strong></div>
-        <button class="submit" id="submit" type="submit">Place Order</button>
+        <div class="checkout-dock">
+          <div class="checkout-dock-inner">
+            <div class="dock-total"><span id="count">1</span> portion(s)<strong id="total">₹{{ menu.unit_price }}</strong></div>
+            <button class="submit" id="submit" type="submit">Place Order</button>
+          </div>
+        </div>
         <p class="note">Saved directly to PureFruit. Payment instructions appear after submission. No WhatsApp chat required.</p>
       </form>
       {% if customer %}

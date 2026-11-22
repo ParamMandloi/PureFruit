@@ -38,6 +38,23 @@ def build_order_qr_uri(payee_address, payee_name, order):
     }
     return "upi://pay?" + urlencode(params)
 
+def build_phonepe_payment_uri(payee_address, payee_name, order):
+    """Simple UPI pay-to-VPA intent with amount prefilled for PhonePe.
+
+    Unlike the prior merchant-style link, omit merchant transaction reference,
+    custom mode and MCC fields for this P2P-style HUF payee. Banks or PhonePe
+    may still decline a transaction; manual pay-to-mobile remains the fallback.
+    """
+    params = {
+        "pa": payee_address,
+        "pn": payee_name,
+        "am": f'{order["total_price"]:.2f}',
+        "cu": "INR",
+        "tn": "PureFruit juice",
+    }
+    return "phonepe://pay?" + urlencode(params)
+
+
 def slots_for_date(target, now):
     """Pure IST date/time rule; exactly 09:00 closes morning and 17:00 closes evening."""
     if target.weekday() >= 5 or target < now.date():
@@ -338,14 +355,15 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
         order = order_by_ref(order_ref)
         if not order or order.get("deleted_at"):
             abort(404)
-        # Prefer the verified mobile-number payment route. Do not construct
-        # web-initiated UPI payment intents to the HUF VPA: the payer's bank
-        # has rejected those even though pay-to-mobile succeeds. App launch
-        # buttons on the confirmation page open apps, not a transaction.
+        # PhonePe gets an amount-prefilled, minimal P2P-style UPI link.
+        # The successful pay-to-mobile route stays available if the bank
+        # rejects payment to this HUF VPA through a web-initiated intent.
         response = app.make_response(render_template(
             "daily_thanks.html", order=order, slots=SLOTS,
             csrf=csrf_token(), payment_address=upi_payee_address,
             pay_mobile_number="9619140077",
+            phonepe_link=build_phonepe_payment_uri(
+                upi_payee_address, upi_payee_name, order),
         ))
         response.headers["Cache-Control"] = "private, no-store"
         return response
