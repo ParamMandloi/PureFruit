@@ -189,7 +189,8 @@ class DailyOrdersTest(unittest.TestCase):
         page = self.client.get(order.headers["Location"])
         self.assertEqual(page.status_code, 200)
         self.assertIn(b"9619140077-huf@ybl", page.data)
-        self.assertIn(b"upi://pay?pa=9619140077-huf%40ybl", page.data)
+        # Generic UPI chooser was removed because it can launch WhatsApp on iOS.
+        self.assertNotIn(b'href="upi://pay?', page.data)
         self.assertIn(b"phonepe://pay?pa=9619140077-huf%40ybl", page.data)
         self.assertIn(b"tez://upi/pay?pa=9619140077-huf%40ybl", page.data)
         self.assertIn(b"Order confirmed", page.data)
