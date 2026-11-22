@@ -1116,6 +1116,14 @@ def export_deliveries():
 
 setup_db()
 
+# Separate, opt-in daily juice form; does not alter the subscription checkout.
+from daily_orders import register_daily_orders
+register_daily_orders(
+    app=app, get_db=get_db, now_ist=now_ist, csrf_token=csrf_token,
+    require_csrf=require_csrf, staff_only=staff_only, csv_response=csv_response,
+    upi_payee_address=UPI_PAYEE_ADDRESS, upi_payee_name=UPI_PAYEE_NAME,
+)
+
 if __name__ == "__main__":
     if not ADMIN_PASSWORD:
         print("NOTE: set ADMIN_PASSWORD and SECRET_KEY for a secure staff report.")
