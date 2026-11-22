@@ -33,7 +33,7 @@ img{display:block;max-width:230px;width:100%;margin:15px auto}
   <p class="success"><strong>Payment reported — thank you!</strong><br>Our team will check the bank credit. Your delivery is already confirmed. Please don't pay a second time unless we contact you.</p>
 {% else %}
   <h2 style="font-size:18px;margin:0 0 6px">Optional UPI payment</h2>
-  <p class="note">Your order is confirmed. Pay now or later, directly from within PhonePe or Google Pay. Website-launched payment links have been disabled because the UPI app may decline them for security reasons.</p>
+  <p class="note">Your order is confirmed. To pay, open PhonePe or Google Pay and use the UPI ID or QR below. You may also pay later.</p>
   <p class="amount" id="pay-amount">₹{{ order.total_price }}</p>
   <div class="recipient">UPI ID: <strong id="upi-address">{{ payment_address }}</strong>
     <button class="copy" id="copy-upi" type="button" aria-label="Copy PureFruit UPI ID">Copy UPI ID</button>
@@ -51,7 +51,9 @@ img{display:block;max-width:230px;width:100%;margin:15px auto}
   </div>
   <img src="{{ url_for('daily_payment_qr', order_ref=order.order_ref) }}" alt="Recipient UPI QR — enter the amount manually in your app">
   <p class="qr-action"><a href="{{ url_for('daily_payment_qr', order_ref=order.order_ref) }}" target="_blank" rel="noopener">Open QR image to save</a></p>
-  <p class="note">If a payment made manually is also declined, it may be a bank or UPI security restriction. Do not keep retrying. Your order remains confirmed for delivery.</p>
+  <details class="note"><summary>Payment declined?</summary>
+    <p>Try paying from within your UPI app using the UPI ID rather than a website link. If the app still blocks it, don't keep retrying. Your order remains confirmed; please contact PureFruit to arrange payment later.</p>
+  </details>
   <form method="post" action="{{ url_for('daily_report_payment', order_ref=order.order_ref) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf }}">
     <button class="report" type="submit">I've made payment</button>
