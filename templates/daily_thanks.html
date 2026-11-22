@@ -13,7 +13,7 @@ img{display:block;max-width:230px;width:100%;margin:15px auto}
 .recipient{font-size:13px;color:#555;background:#f6f6f4;border:1px solid #e9e9e4;padding:11px 12px;border-radius:8px;margin:11px 0}
 .optional{border-top:1px solid #ededeb;margin-top:22px;padding-top:17px}.success{background:#e8f5ea;border:1px solid #cce6d2;padding:15px;border-radius:10px;color:#1c5931;margin:14px 0;font-size:14px}
 .confirmed{font-weight:700;color:#226039;font-size:16px}.report{width:100%;background:#28653b;color:white;font-size:16px;font-weight:700;font-family:inherit;border:0;border-radius:9px;min-height:47px;cursor:pointer;margin-top:16px}
-.copy{background:#e9e9e5;border:0;border-radius:6px;padding:6px 8px;font-size:12px;cursor:pointer}.instructions{background:#f8f8f6;border:1px solid #e6e6e2;border-radius:10px;padding:12px;margin-top:14px;font-size:13px}.instructions ol{margin:10px 0 6px;padding-left:21px}.instructions li{margin:7px 0}.qr-action{text-align:center;font-size:13px;margin:0 0 12px}.qr-action a{text-decoration:underline;text-underline-offset:3px}.flash{background:#e8f5ea;border:1px solid #cce6d2;border-radius:9px;padding:10px;margin:10px 0}
+.copy{background:#e9e9e5;border:0;border-radius:6px;padding:6px 8px;font-size:12px;cursor:pointer}.mobile-pay{border:1px solid #d4e3d6;background:#edf8ef;padding:14px;border-radius:11px;margin:12px 0}.mobile-pay h3{margin:0 0 7px;font-size:15px}.mobile-pay strong{font-size:22px;letter-spacing:.2px}.mobile-pay small{display:block;color:#46604b;margin-top:6px}.mobile-pay button{background:#28653b;color:white;border:0;border-radius:7px;padding:9px 12px;margin-left:8px;font-weight:700;cursor:pointer}.qr-info{font-weight:700;margin:12px 0 0;text-align:center}.instructions{background:#f8f8f6;border:1px solid #e6e6e2;border-radius:10px;padding:12px;margin-top:14px;font-size:13px}.instructions ol{margin:10px 0 6px;padding-left:21px}.instructions li{margin:7px 0}.qr-action{text-align:center;font-size:13px;margin:0 0 12px}.qr-action a{text-decoration:underline;text-underline-offset:3px}.flash{background:#e8f5ea;border:1px solid #cce6d2;border-radius:9px;padding:10px;margin:10px 0}
 
 .note{font-size:12px;color:#666;margin:15px 0 0}.ok{display:inline-block;background:#eaf6ed;color:#206437;border-radius:12px;padding:4px 10px;font-size:12px;font-weight:700}
 </style></head><body><main><div class="logo">PureFruit</div><section class="card">
@@ -39,11 +39,18 @@ img{display:block;max-width:230px;width:100%;margin:15px auto}
   <h2 style="font-size:18px;margin:0 0 6px">Optional UPI payment</h2>
   <p class="note">Your order is confirmed whether you pay now or later. Choose your payment app below.</p>
   <p class="amount" id="pay-amount">₹{{ order.total_price }}</p>
-  <div class="app-options" aria-label="Pay directly with your UPI app">
+  <div class="mobile-pay" aria-label="Recommended payment using mobile number">
+    <h3>✓ Recommended: Pay to mobile number</h3>
+    <strong id="upi-mobile">{{ pay_mobile_number }}</strong>
+    <button id="copy-mobile" type="button">Copy number</button>
+    <small>Open PhonePe or Google Pay → Pay to mobile number → paste the number → enter ₹{{ order.total_price }}.</small>
+    <small>Before paying, confirm that the recipient and receiving account are the ones intended for PureFruit. A mobile payment may reach a different UPI-linked account than the HUF ID.</small>
+  </div>
+  <div class="app-options" aria-label="Try direct UPI payment to HUF ID">
     <a id="upi-phonepe" href="{{ phonepe_link }}">Pay with PhonePe</a>
     <a id="upi-gpay" href="{{ gpay_link }}">Pay with Google Pay</a>
   </div>
-  <p class="note">These buttons use the same app-specific UPI links as PureFruit's earlier checkout. The amount and recipient should appear in the app. Confirm the bank-registered recipient before paying.</p>
+  <p class="note">Direct app buttons use the HUF UPI ID, which may still be blocked by the payment provider. If declined, use the mobile-number method above instead; do not repeatedly retry a declined transaction.</p>
   <div class="recipient">UPI ID: <strong id="upi-address">{{ payment_address }}</strong>
     <button class="copy" id="copy-upi" type="button" aria-label="Copy PureFruit UPI ID">Copy UPI ID</button>
     <br><small>Bank-registered recipient: PARAMPRAKASH RAJENDRA MANDLOI KARTA</small>
@@ -54,11 +61,12 @@ img{display:block;max-width:230px;width:100%;margin:15px auto}
     <ol>
       <li>If a payment button fails or is declined, open PhonePe or Google Pay yourself.</li>
       <li>Select <strong>Pay to UPI ID</strong> and paste the copied ID, or scan the QR below from inside the app.</li>
-      <li>Enter <strong>₹{{ order.total_price }}</strong> and verify the bank-registered recipient before paying.</li>
+      <li>Check that the order amount is <strong>₹{{ order.total_price }}</strong> and verify the bank-registered recipient before paying.</li>
     </ol>
-    <p class="note">If the QR is on the same phone, open or save the QR image and choose Scan from gallery in your payment app, if supported. Enter the amount yourself.</p>
+    <p class="note">The QR includes the exact order amount. If the QR is on the same phone, open or save it and scan from your payment app gallery, if supported.</p>
   </div>
-  <img src="{{ url_for('daily_payment_qr', order_ref=order.order_ref) }}" alt="Recipient UPI QR — enter the amount manually in your app">
+  <p class="qr-info">QR amount: ₹{{ order.total_price }} (prefilled)</p>
+  <img src="{{ url_for('daily_payment_qr', order_ref=order.order_ref) }}" alt="Recipient UPI QR with ₹{{ order.total_price }} prefilled">
   <p class="qr-action"><a href="{{ url_for('daily_payment_qr', order_ref=order.order_ref) }}" target="_blank" rel="noopener">Open QR image to save</a></p>
   <details class="note"><summary>Payment declined?</summary>
     <p>Try using Copy UPI ID or the QR from inside PhonePe or Google Pay instead of using the direct payment button. If that is also declined, don't keep retrying; the bank/UPI provider may be blocking the transfer. Your order remains confirmed for delivery.</p>
@@ -72,14 +80,20 @@ img{display:block;max-width:230px;width:100%;margin:15px auto}
 </section>
 <script>
 (function(){
-  var copy=document.getElementById('copy-upi');
-  if(copy)copy.addEventListener('click',function(){
-    var id=document.getElementById('upi-address').textContent.trim();
-    if(navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(id).then(function(){copy.textContent='Copied ✓';})
-        .catch(function(){window.prompt('Copy UPI ID',id);});
-    } else window.prompt('Copy UPI ID',id);
-  });
+  function copyValue(buttonId, valueId, label){
+    var button=document.getElementById(buttonId);
+    var value=document.getElementById(valueId);
+    if(!button||!value)return;
+    button.addEventListener('click',function(){
+      var text=value.textContent.trim();
+      if(navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function(){button.textContent='Copied ✓';})
+          .catch(function(){window.prompt(label,text);});
+      } else window.prompt(label,text);
+    });
+  }
+  copyValue('copy-upi','upi-address','Copy UPI ID');
+  copyValue('copy-mobile','upi-mobile','Copy mobile number');
 })();
 </script>
 </section></main></body></html>

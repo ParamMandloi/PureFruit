@@ -28,6 +28,16 @@ MAX_DAILY_ORDERS = 10
 COOKIE_NAME = "purefruit_daily_device"
 COOKIE_AGE = 180 * 24 * 3600
 
+
+def build_order_qr_uri(payee_address, payee_name, order):
+    """Generate a UPI QR with the exact amount but no unverified receipt claim."""
+    params = {
+        "pa": payee_address, "pn": payee_name,
+        "am": f'{order["total_price"]:.2f}',
+        "cu": "INR", "tn": "PureFruit " + order["order_ref"],
+    }
+    return "upi://pay?" + urlencode(params)
+
 def slots_for_date(target, now):
     """Pure IST date/time rule; exactly 09:00 closes morning and 17:00 closes evening."""
     if target.weekday() >= 5 or target < now.date():
@@ -347,6 +357,7 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
             csrf=csrf_token(), payment_address=upi_payee_address,
             phonepe_link="phonepe://pay" + intent[len("upi://pay"):],
             gpay_link="tez://upi/pay" + intent[len("upi://pay"):],
+            pay_mobile_number="9619140077",
         ))
         response.headers["Cache-Control"] = "private, no-store"
         return response
@@ -383,14 +394,10 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
         order = order_by_ref(order_ref)
         if not order or order.get("deleted_at") or order["status"] == "cancelled":
             abort(404)
-        # Minimal static recipient QR. No app deep link, reference, forced
-        # amount, or merchant fields. Customers type the amount in their app.
-        # Use the bank-registered recipient name, not a brand alias.
-        params = {
-            "pa": upi_payee_address, "pn": upi_payee_name, "cu": "INR"
-        }
+        # Amount-prefilled QR. Receiver remains the selected HUF UPI VPA.
+        # Authorization is ultimately the payer app/bank's decision.
         qr = qrcode.QRCode(box_size=7, border=3)
-        qr.add_data("upi://pay?" + urlencode(params))
+        qr.add_data(build_order_qr_uri(upi_payee_address, upi_payee_name, order))
         qr.make(fit=True)
         buf = io.BytesIO()
         qr.make_image(fill_color="black", back_color="white").save(buf, format="PNG")

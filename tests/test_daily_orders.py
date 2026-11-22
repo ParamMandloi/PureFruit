@@ -14,7 +14,7 @@ os.environ.pop("TELEGRAM_BOT_TOKEN", None)
 os.environ.pop("TELEGRAM_CHAT_ID", None)
 
 app_module = importlib.import_module("app")
-from daily_orders import MAX_DAILY_ORDERS, slots_for_date
+from daily_orders import MAX_DAILY_ORDERS, slots_for_date, build_order_qr_uri
 
 app = app_module.app
 
@@ -198,6 +198,10 @@ class DailyOrdersTest(unittest.TestCase):
         # Earlier subscription flow: same app URI prefixes and mobile mode=04.
         self.assertIn(b"Pay with PhonePe", page.data)
         self.assertIn(b"Pay with Google Pay", page.data)
+        self.assertIn(b"Recommended: Pay to mobile number", page.data)
+        self.assertIn(b"9619140077", page.data)
+        self.assertIn(b"Copy number", page.data)
+        self.assertIn(b"QR amount: ", page.data)
         self.assertIn(b"phonepe://pay?pa=9619140077-huf%40ybl", page.data)
         self.assertIn(b"tez://upi/pay?pa=9619140077-huf%40ybl", page.data)
         self.assertIn(b"mode=04", page.data)
@@ -210,6 +214,13 @@ class DailyOrdersTest(unittest.TestCase):
         self.assertEqual(qr.status_code, 200)
         self.assertEqual(qr.content_type, "image/png")
         self.assertGreater(len(qr.data), 100)
+        uri = build_order_qr_uri(
+            app_module.UPI_PAYEE_ADDRESS, app_module.UPI_PAYEE_NAME,
+            {"total_price": 297, "order_ref": ref},
+        )
+        self.assertIn("am=297.00", uri)
+        self.assertIn("pa=9619140077-huf%40ybl", uri)
+        self.assertIn("cu=INR", uri)
 
     def test_payment_made_reports_only_and_does_not_hold_delivery(self):
         self.open_menu()
