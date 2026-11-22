@@ -1,0 +1,31 @@
+name: Daily ordering tests
+
+on:
+  pull_request:
+    paths:
+      - 'app.py'
+      - 'daily_orders.py'
+      - 'telegram_alerts.py'
+      - 'templates/daily*.html'
+      - 'tests/**'
+      - 'requirements.txt'
+      - '.github/workflows/daily-order-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-daily-orders:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Compile Python
+        run: python -m compileall -q app.py daily_orders.py telegram_alerts.py meta_whatsapp_webhook.py
+      - name: Test daily checkout and staff access
+        run: python -m unittest discover -s tests -p 'test_daily_orders.py' -v
