@@ -1,6 +1,14 @@
 name: Daily ordering tests
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'daily_orders.py'
+      - 'telegram_alerts.py'
+      - 'templates/daily*.html'
+      - 'tests/**'
+      - '.github/workflows/daily-order-tests.yml'
   pull_request:
     paths:
       - 'app.py'

@@ -2,28 +2,40 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex"><meta name="csrf-token" content="{{ csrf }}">
-<title>Today's Juice | PureFruit</title>
+<meta name="csrf-token" content="{{ csrf }}">
+<title>Order Fresh Juice | PureFruit</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#f7f7f5;color:#292929;font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-.shell{width:min(440px,calc(100% - 28px));margin:20px auto 35px}.brand{font:700 34px Georgia,serif;letter-spacing:-1.2px;margin:0}.tagline{font-size:12px;color:#737373;margin:2px 0 18px}
-.card{background:white;border:1px solid #e5e5e2;border-radius:18px;overflow:hidden;box-shadow:0 8px 32px #00000008}
-.fruit-img{display:block;width:100%;height:180px;object-fit:contain;background:#f5f5f2;padding:12px}
-.inner{padding:19px}.eyebrow{font-size:11px;letter-spacing:1.3px;font-weight:700;color:#777;text-transform:uppercase}
-h1{font:700 27px Georgia,serif;margin:4px 0 6px}.price{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:18px}.price strong{font-size:23px;white-space:nowrap}.muted{color:#717171;font-size:12px}
-label{display:block;font-size:13px;font-weight:650;margin:14px 0 7px}.qty{display:flex;align-items:center;justify-content:space-between;border:1px solid #d8d8d5;border-radius:11px;height:48px;overflow:hidden}
-.qty button{height:100%;width:58px;background:#fafaf8;border:0;font-size:24px;cursor:pointer}.qty input{border:0;outline:0;width:72px;text-align:center;font-size:20px;font-weight:700;appearance:textfield}
+*{box-sizing:border-box}
+body{margin:0;background:#f8f8f6;color:#292929;font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.shell{max-width:450px;margin:16px auto 38px;padding:0 14px}
+.brand{font:700 35px Georgia,serif;letter-spacing:-1.1px;margin:0}.tagline{font-size:12px;color:#737373;margin:2px 0 17px}
+.card{background:#fff;border:1px solid #e5e5e1;border-radius:18px;overflow:hidden;box-shadow:0 8px 28px #00000006}
+.fruit-img{display:block;width:100%;height:160px;object-fit:contain;background:#f5f5f2;padding:10px}
+.inner{padding:19px}
+.eyebrow{font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:#777;font-weight:700}
+h1{font:700 26px Georgia,serif;margin:4px 0 6px}.price{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
+.price strong{font-size:23px;white-space:nowrap}.muted{color:#737373;font-size:12px}
+label.field{display:block;font-weight:650;font-size:13px;margin:17px 0 7px}
+.qty{display:flex;align-items:center;justify-content:space-between;border:1px solid #d7d7d4;border-radius:10px;height:48px;overflow:hidden}
+.qty button{height:100%;width:58px;border:0;background:#f5f5f3;font-size:24px;cursor:pointer}
+.qty input{border:0;outline:0;width:90px;text-align:center;font-size:20px;font-weight:700;appearance:textfield}
 .qty input::-webkit-inner-spin-button,.qty input::-webkit-outer-spin-button{appearance:none}
-.slots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.slots label{display:block;margin:0;cursor:pointer}.slots input{position:absolute;opacity:0}.slots span{display:block;text-align:center;padding:12px 6px;border:1px solid #d8d8d5;border-radius:10px;font-size:13px;font-weight:650}
-.slots input:checked + span{border-color:#202020;background:#f0f0ee;box-shadow:inset 0 0 0 1px #202020}
-.slots input:focus-visible + span{outline:2px solid #777;outline-offset:2px}
-input[type=text]{width:100%;min-height:47px;border:1px solid #d8d8d5;border-radius:10px;padding:11px 13px;font:inherit}
-.total{display:flex;justify-content:space-between;padding:15px 0;border-top:1px solid #e5e5e2;margin-top:20px;align-items:center}
-.total strong{font-size:23px}.submit{display:block;width:100%;padding:15px 12px;background:#252525;color:white;border:0;border-radius:10px;font-weight:700;font-size:16px;cursor:pointer}.submit:disabled{opacity:.55;cursor:not-allowed}
-.notice{margin:8px 0 0;font-size:12px;color:#777}.error{background:#fff1ee;color:#923f30;padding:11px;border-radius:8px;margin:10px 0}
-.closed{background:#f3f3f1;padding:18px;border-radius:10px;margin-top:16px;color:#666}
-.honeypot{position:absolute;left:-10000px}
+.options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.options label{cursor:pointer}.options input{position:absolute;opacity:0}.options span{display:flex;min-height:76px;align-items:center;justify-content:center;flex-direction:column;gap:3px;padding:8px;border:1px solid #d8d8d5;border-radius:10px;text-align:center;font-size:12px}
+.options b{font-size:13px}.options input:checked+span{border-color:#232323;box-shadow:inset 0 0 0 1px #232323;background:#f3f3f1}
+.options input:focus-visible+span{outline:2px solid #777;outline-offset:2px}
+input[type=text],input[type=tel]{width:100%;min-height:46px;border:1px solid #d6d6d3;border-radius:9px;padding:10px 12px;font:inherit}
+.hint{margin-top:5px;font-size:11px;color:#777}
+.saved{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px;border:1px solid #dededb;border-radius:10px;background:#f5f5f3;font-size:13px}
+.saved button{border:0;background:transparent;text-decoration:underline;cursor:pointer;font-size:12px;font-weight:700}
+.total{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #e5e5e2;margin:20px 0 12px;padding-top:14px}
+.total strong{font-size:24px}
+.submit{width:100%;padding:14px;background:#292929;border:0;border-radius:10px;color:#fff;font-weight:700;font-size:16px;cursor:pointer}
+.submit:disabled{opacity:.5}
+.note{font-size:12px;color:#747474;margin:11px 0 2px}.error{padding:12px;background:#fff1ed;color:#932f21;border-radius:8px;margin:12px 0}
+.closed{margin:18px 0 3px;padding:17px;border-radius:9px;background:#f2f2f0;color:#626262;font-size:14px}
+[hidden]{display:none!important}.honeypot{position:absolute;left:-10000px}
+.forget{display:inline-block;margin:8px 0 0;border:0;background:none;padding:0;color:#737373;font-size:12px;text-decoration:underline;cursor:pointer}
 </style>
 </head>
 <body>
@@ -31,52 +43,89 @@ input[type=text]{width:100%;min-height:47px;border:1px solid #d8d8d5;border-radi
   <p class="brand">PureFruit</p>
   <p class="tagline">Healthier happier you · L&amp;T Serene County</p>
   <section class="card">
-    {% if image %}<img class="fruit-img" src="{{ url_for('static', filename=image) }}" alt="{{ menu.juice }} juice">{% endif %}
+    <img id="fruit-image" class="fruit-img" src="{{ url_for('static',filename=image) if image else url_for('static',filename='fruit/purefruit-bottle.webp') }}" alt="{{ menu.juice }} juice">
     <div class="inner">
-      <span class="eyebrow">{{ menu.service_date }} · 300 ml bottle</span>
+      <span class="eyebrow">FRESH COLD-PRESSED · 300 ML</span>
       <div class="price">
-        <div><h1>{{ menu.juice }} Juice</h1><div class="muted">Fresh cold-pressed · No sugar or water</div></div>
-        <strong>₹{{ menu.unit_price }}</strong>
+        <div><h1 id="juice-name">{{ menu.juice }} Juice</h1><div class="muted">No added sugar or water</div></div>
+        <strong id="price">₹{{ menu.unit_price }}</strong>
       </div>
       {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
-      {% if slots %}
-      <form method="post" id="daily-form" action="{{ url_for('daily_order_page') }}">
+      {% if options %}
+      <form id="order-form" action="{{ url_for('daily_order_page') }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf }}">
         <input type="hidden" name="nonce" value="{{ nonce }}">
-        <div class="honeypot" aria-hidden="true"><label>Leave blank<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
-        <label for="portions">Portions</label>
+        <div class="honeypot" aria-hidden="true"><label>Leave empty<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+        <label class="field" for="portions">Number of portions</label>
         <div class="qty">
-          <button type="button" id="minus" aria-label="Reduce portions">−</button>
-          <input id="portions" name="portions" type="number" min="1" max="30" step="1" value="1" inputmode="numeric" required aria-label="Number of portions">
-          <button type="button" id="plus" aria-label="Increase portions">+</button>
+          <button type="button" id="minus" aria-label="Remove one portion">−</button>
+          <input id="portions" type="number" name="portions" value="1" min="1" max="30" required inputmode="numeric">
+          <button type="button" id="plus" aria-label="Add one portion">+</button>
         </div>
-        <label>Delivery slot</label>
-        <div class="slots">
-          {% for key,text in slots.items() %}
-          <label><input type="radio" name="delivery_slot" value="{{ key }}" {% if loop.first %}checked{% endif %} required><span>{{ text }}</span></label>
+        <label class="field">Delivery date &amp; slot</label>
+        <div class="options">
+          {% for option in options %}
+          <label><input type="radio" name="delivery_option" value="{{ option.value }}" {% if loop.first %}checked{% endif %}
+              data-price="{{ option.unit_price }}" data-juice="{{ option.juice }}" data-image="{{ url_for('static',filename=option.image) }}"
+              required>
+            <span><b>{{ option.heading }} · {{ 'Morning' if option.slot=='morning' else 'Evening' }}</b>
+              {{ option.slot_label }}{% if option.juice != menu.juice %}<small>{{ option.juice }}</small>{% endif %}
+            </span>
+          </label>
           {% endfor %}
         </div>
-        <label for="building_flat">Building / Flat number</label>
-        <input id="building_flat" name="building_flat" type="text" minlength="3" maxlength="80" placeholder="e.g. Tower B / 1204" autocomplete="street-address" required>
+        <p class="hint">After 9 AM: evening or next service day. After 5 PM: next service day only. Maximum {{ limit }} orders per delivery date.</p>
+        <label class="field" for="building_flat">Building / Flat</label>
+        <input type="text" name="building_flat" id="building_flat" minlength="3" maxlength="80" required placeholder="e.g. Tower B / 1204">
+        {% if customer %}
+        <label class="field">Your details</label>
+        <div class="saved" id="saved-details"><span>Ordering as <strong>{{ customer.name }}</strong> · ••••{{ customer.phone[-4:] }}</span>
+          <button type="button" id="edit-details">Change</button></div>
+        {% endif %}
+        <div id="customer-details" {% if customer %}hidden{% endif %}>
+          <label class="field" for="customer_name">Name</label>
+          <input type="text" name="customer_name" id="customer_name" maxlength="70" minlength="2" required autocomplete="name"
+                 value="{{ customer.name if customer else '' }}" placeholder="Your name">
+          <label class="field" for="customer_mobile">Mobile number</label>
+          <input type="tel" name="customer_mobile" id="customer_mobile" minlength="10" maxlength="14" required inputmode="tel"
+                 autocomplete="tel" value="{{ customer.phone if customer else '' }}" placeholder="10-digit mobile number">
+        </div>
         <div class="total"><span>Total · <span id="count">1</span> portion(s)</span><strong id="total">₹{{ menu.unit_price }}</strong></div>
-        <button id="submit" class="submit" type="submit">Place Order</button>
-        <p class="notice">Order is saved directly with PureFruit. No WhatsApp chat or shopping cart. Payment instructions follow.</p>
+        <button class="submit" id="submit" type="submit">Place Order</button>
+        <p class="note">Saved directly to PureFruit. Payment instructions appear after submission. No WhatsApp chat required.</p>
       </form>
+      {% if customer %}
+      <form action="{{ url_for('forget_daily_customer') }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <button class="forget" type="submit">Forget saved details on this device</button>
+      </form>
+      {% endif %}
       {% else %}
-      <div class="closed">Orders for this juice or delivery slot are currently closed. Please check the next PureFruit WhatsApp announcement.</div>
+      <div class="closed">Ordering is currently closed or the daily limit is reached. Please check the next PureFruit announcement.</div>
       {% endif %}
     </div>
   </section>
 </main>
 <script>
 (function(){
-const form=document.getElementById('daily-form');if(!form)return;
+const form=document.getElementById('order-form');if(!form)return;
 const qty=document.getElementById('portions'),count=document.getElementById('count'),total=document.getElementById('total');
-const price={{ menu.unit_price|int }};
-function refresh(){let n=Math.max(1,Math.min(30,parseInt(qty.value,10)||1));qty.value=n;count.textContent=n;total.textContent='₹'+(n*price).toLocaleString('en-IN');}
-document.getElementById('minus').addEventListener('click',()=>{qty.value=Math.max(1,(parseInt(qty.value,10)||1)-1);refresh();});
-document.getElementById('plus').addEventListener('click',()=>{qty.value=Math.min(30,(parseInt(qty.value,10)||1)+1);refresh();});
-qty.addEventListener('change',refresh);
+const options=[...form.querySelectorAll('input[name="delivery_option"]')];
+let price=Number(options[0]?.dataset.price||99);
+function refresh(){const n=Math.min(30,Math.max(1,Number.parseInt(qty.value,10)||1));qty.value=n;count.textContent=n;total.textContent='₹'+(n*price).toLocaleString('en-IN');}
+function selectOption(){
+const selected=options.find(x=>x.checked);if(!selected)return;
+price=Number(selected.dataset.price);
+document.getElementById('juice-name').textContent=selected.dataset.juice+' Juice';
+document.getElementById('price').textContent='₹'+price;
+const img=document.getElementById('fruit-image');img.src=selected.dataset.image;img.alt=selected.dataset.juice+' juice';
+refresh();}
+options.forEach(x=>x.addEventListener('change',selectOption));
+document.getElementById('minus').addEventListener('click',()=>{qty.value=Math.max(1,Number(qty.value||1)-1);refresh();});
+document.getElementById('plus').addEventListener('click',()=>{qty.value=Math.min(30,Number(qty.value||1)+1);refresh();});
+qty.addEventListener('change',refresh);selectOption();
+const edit=document.getElementById('edit-details');
+if(edit)edit.addEventListener('click',()=>{document.getElementById('saved-details').hidden=true;document.getElementById('customer-details').hidden=false;document.getElementById('customer_name').focus();});
 form.addEventListener('submit',()=>{document.getElementById('submit').disabled=true;});
 })();
 </script>

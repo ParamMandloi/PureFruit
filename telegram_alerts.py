@@ -180,6 +180,7 @@ def send_daily_order_alert(order):
         "PureFruit | NEW DAILY ORDER — PAYMENT UNVERIFIED",
         "Order: " + _safe(order.get("order_ref")),
         "Juice: " + _safe(order.get("juice")) + " · " + _safe(order.get("portions")) + " portions",
+        "Customer: " + _safe(order.get("name"), 70) + " | Mobile: " + _safe(order.get("phone"), 20),
         "Value: ₹" + _safe(order.get("total_price")),
         "Date: " + _safe(order.get("service_date")) + " · " + label,
         "Building / Flat: " + _safe(order.get("building_flat"), 80),
