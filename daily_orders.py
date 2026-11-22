@@ -22,7 +22,7 @@ JUICES = {
     "Mosambi": "fruit/mosambi.webp",
     "Watermelon": "fruit/watermelon.webp",
 }
-SLOTS = {"morning": "8–9:30 AM", "afternoon": "4–5:30 PM"}
+SLOTS = {"morning": "8–9 AM", "afternoon": "4–5 PM"}
 STATUSES = ("new", "preparing", "delivered", "cancelled")
 MAX_DAILY_ORDERS = 10
 COOKIE_NAME = "purefruit_daily_device"
