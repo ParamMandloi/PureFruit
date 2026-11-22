@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Order Received | PureFruit</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#f7f7f5;color:#292929;font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{width:min(430px,calc(100% - 30px));margin:34px auto}.logo{font:700 34px Georgia,serif;margin-bottom:20px}
+.card{background:white;border:1px solid #e2e2df;border-radius:17px;padding:24px;box-shadow:0 10px 30px #00000007}
+h1{font:700 27px Georgia,serif;margin:8px 0}.muted{color:#717171;font-size:13px}.ref{font-weight:700;letter-spacing:.3px}.line{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #eee;padding:10px 0;font-size:14px}.line strong{text-align:right}
+.amount{font-size:26px;font-weight:700;margin:10px 0}a.pay{display:block;text-align:center;background:#252525;color:#fff;padding:14px;border-radius:9px;text-decoration:none;font-weight:700}
+img{display:block;max-width:230px;width:100%;margin:15px auto}
+.note{font-size:12px;color:#666;margin:15px 0 0}.ok{display:inline-block;background:#eaf6ed;color:#206437;border-radius:12px;padding:4px 10px;font-size:12px;font-weight:700}
+</style></head><body><main><div class="logo">PureFruit</div><section class="card">
+<span class="ok">Order request saved</span>
+<h1>Thank you!</h1>
+<p class="muted">Your order has been sent to our staff dashboard. Payment is <strong>not yet verified</strong>.</p>
+<p class="ref">{{ order.order_ref }}</p>
+<div class="line"><span>Juice</span><strong>{{ order.juice }} · 300 ml</strong></div>
+<div class="line"><span>Portions</span><strong>{{ order.portions }}</strong></div>
+<div class="line"><span>Date</span><strong>{{ order.service_date }}</strong></div>
+<div class="line"><span>Slot</span><strong>{{ slots.get(order.delivery_slot, order.delivery_slot) }}</strong></div>
+<div class="line"><span>Delivery</span><strong>{{ order.building_flat }}</strong></div>
+<div class="line"><span>Amount due</span><strong>₹{{ order.total_price }}</strong></div>
+{% if order.payment_status == 'paid' %}
+<p class="ok">Payment recorded</p>
+{% else %}
+<h2 style="font-size:18px;margin:20px 0 6px">Pay using UPI</h2>
+<p class="amount">₹{{ order.total_price }}</p>
+<a class="pay" href="{{ upi_link }}">Pay with UPI App</a>
+<img src="{{ url_for('daily_payment_qr', order_ref=order.order_ref) }}" alt="UPI QR for your order">
+<p class="note">Use the amount and order reference above. Staff will confirm payment after checking the actual bank credit. A successful UPI app screen is not automatic confirmation.</p>
+{% endif %}
+</section></main></body></html>

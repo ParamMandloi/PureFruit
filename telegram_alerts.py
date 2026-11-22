@@ -167,3 +167,22 @@ def discover_groups():
     except (requests.RequestException, ValueError, KeyError) as err:
         LOG.warning("Telegram group discovery failed: %s", type(err).__name__)
         return [], "Could not fetch recent group messages. Try sending /start in the group and refreshing."
+
+
+def send_daily_order_alert(order):
+    """Alert staff of a one-off daily order; never marks payment as confirmed."""
+    token, chat_id = _config()
+    if not token or not chat_id:
+        return False
+    label = {"morning": "8–9:30 AM", "afternoon": "4–5:30 PM"}.get(
+        order.get("delivery_slot"), "Unknown slot")
+    message = "\n".join([
+        "PureFruit | NEW DAILY ORDER — PAYMENT UNVERIFIED",
+        "Order: " + _safe(order.get("order_ref")),
+        "Juice: " + _safe(order.get("juice")) + " · " + _safe(order.get("portions")) + " portions",
+        "Value: ₹" + _safe(order.get("total_price")),
+        "Date: " + _safe(order.get("service_date")) + " · " + label,
+        "Building / Flat: " + _safe(order.get("building_flat"), 80),
+        "Manage: https://www.purefruit.in/staff/daily",
+    ])
+    return _send_text(token, chat_id, message)

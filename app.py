@@ -387,7 +387,7 @@ def security_headers(response):
     return response
 
 
-@app.get("/")
+@app.get("/subscriptions")
 def index():
     return render_template(
         "index.html", csrf=csrf_token(), min_start=next_available_day().isoformat(),
@@ -855,7 +855,7 @@ def telegram_test():
 def staff_logout():
     require_csrf()
     session.clear()
-    return redirect(url_for("index"))
+    return redirect(url_for("daily_order_page"))
 
 
 def all_orders():
@@ -870,7 +870,7 @@ def safe_date(value):
         return now_ist().date()
 
 
-@app.get("/staff")
+@app.get("/staff/subscriptions")
 @staff_only
 def staff_dashboard():
     orders = all_orders()
@@ -1115,6 +1115,14 @@ def export_deliveries():
 
 
 setup_db()
+
+# Separate, opt-in daily juice form; does not alter the subscription checkout.
+from daily_orders import register_daily_orders
+register_daily_orders(
+    app=app, get_db=get_db, now_ist=now_ist, csrf_token=csrf_token,
+    require_csrf=require_csrf, staff_only=staff_only, csv_response=csv_response,
+    upi_payee_address=UPI_PAYEE_ADDRESS, upi_payee_name=UPI_PAYEE_NAME,
+)
 
 if __name__ == "__main__":
     if not ADMIN_PASSWORD:

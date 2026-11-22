@@ -14,12 +14,13 @@
 <body class="staff-body">
   <header class="staff-top"><div class="wrap staff-top-inner">
     <a class="staff-brand" href="{{ url_for('staff_dashboard') }}">PureFruit<small>ORDER REPORT</small></a>
-    <div class="staff-actions"><a class="text-button" href="{{ url_for('index') }}">View website</a><form action="{{ url_for('staff_logout') }}" method="post"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button class="text-button" type="submit">Log out</button></form></div>
+    <div class="staff-actions"><a class="text-button" href="{{ url_for('daily_order_page') }}">View website</a><form action="{{ url_for('staff_logout') }}" method="post"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button class="text-button" type="submit">Log out</button></form></div>
   </div></header>
   <main class="wrap staff-main">
     <h1>Order overview</h1>
     <nav style="display:flex;gap:12px;flex-wrap:wrap;margin:12px 0 18px" aria-label="Order views">
       <a class="small-button secondary" href="{{ url_for('staff_dashboard', view='active') }}">Active orders</a>
+      <a class="small-button secondary" href="{{ url_for('daily_admin') }}">Daily juice orders</a>
       <a class="small-button secondary" href="{{ url_for('staff_dashboard', view='archived') }}">Archived orders ({{ archived_count }})</a>
       <a class="small-button secondary" href="{{ url_for('staff_dashboard', view='all') }}">All orders</a>
     </nav>
