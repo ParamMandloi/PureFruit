@@ -83,9 +83,10 @@ th{font-size:11px;letter-spacing:.04em;color:#777;text-transform:uppercase}
     <div class="stat"><small>Remaining</small><strong>{{ stats.remaining }}</strong></div>
     <div class="stat"><small>Portions</small><strong>{{ stats.portions }}</strong></div>
     <div class="stat"><small>Order value</small><strong>₹{{ stats.value }}</strong></div>
-    <div class="stat"><small>Unpaid</small><strong>{{ stats.unpaid }}</strong></div>
+    <div class="stat"><small>Unverified payments</small><strong>{{ stats.unpaid }}</strong></div>
   </div>
-  <p class="muted">Morning: <strong>{{ stats.morning }} portions</strong> · Evening: <strong>{{ stats.afternoon }} portions</strong></p>
+  <p class="muted">Morning: <strong>{{ stats.morning }} portions</strong> · Evening: <strong>{{ stats.afternoon }} portions</strong> · Customer reports payment: <strong>{{ stats.reported }}</strong></p>
+  <p class="tip">Every submitted order is confirmed for delivery whether paid or unpaid. Only the payment status needs bank verification.</p>
   <form class="flex" method="get" action="{{ url_for('daily_admin') }}">
     <div><label for="date">Filter delivery date</label><input type="date" name="date" id="date" value="{{ selected }}"></div><button class="secondary" type="submit">Show orders</button>
   </form>
@@ -100,7 +101,10 @@ th{font-size:11px;letter-spacing:.04em;color:#777;text-transform:uppercase}
       <td>{{ order.juice }} · {{ order.portions }} × ₹{{ order.unit_price }}<br><strong>₹{{ order.total_price }}</strong></td>
       <td>
       {% if order.payment_status=='paid' %}<span class="paid">Paid · {{ order.payment_method }}</span>
-      {% else %}<span class="unpaid">Unpaid</span>
+      {% elif order.payment_status=='pending_verification' %}<span class="unpaid">Customer reports paid — verify bank credit</span>
+      {% else %}<span class="unpaid">Payment not reported</span>
+      {% endif %}
+      {% if order.payment_status!='paid' %}
       <form class="action-form" method="post" action="{{ url_for('daily_mark_paid',order_ref=order.order_ref) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf }}"><input type="hidden" name="date" value="{{ selected }}">
         <select name="payment_method" required><option value="upi">UPI</option><option value="cash">Cash</option></select>

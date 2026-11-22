@@ -13,7 +13,7 @@ from urllib.parse import urlencode
 import qrcode
 from flask import abort, flash, redirect, render_template, request, session, url_for, send_file
 
-from telegram_alerts import send_daily_order_alert
+from telegram_alerts import send_daily_order_alert, send_daily_payment_report
 
 JUICES = {
     "ABC": "fruit/abc.webp",
@@ -84,6 +84,7 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
             ("customer_id", "INTEGER"),
             ("deleted_at", "TEXT"),
             ("deleted_reason", "TEXT"),
+            ("payment_reported_at", "TEXT"),
             ("archived_at", "TEXT"),
             ("archived_reason", "TEXT NOT NULL DEFAULT ''"),
         ):
@@ -335,6 +336,7 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
         query = urlencode(params)
         response = app.make_response(render_template(
             "daily_thanks.html", order=order, slots=SLOTS,
+            csrf=csrf_token(),
             upi_link="upi://pay?" + query,
             phonepe_link="phonepe://pay?" + query,
             phonepe_ios_link="phonepe://upi/pay?" + query,
@@ -343,6 +345,33 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
         ))
         response.headers["Cache-Control"] = "private, no-store"
         return response
+
+    @app.post("/daily/thanks/<order_ref>/payment-made")
+    def daily_report_payment(order_ref):
+        """Record customer-reported payment, never bank-verified payment.
+
+        Order delivery is already accepted regardless of payment state.
+        """
+        require_csrf()
+        order = order_by_ref(order_ref)
+        if not order or order.get("deleted_at") or order["status"] == "cancelled":
+            abort(404)
+        customer = browser_customer()
+        if not customer or customer["id"] != order.get("customer_id"):
+            abort(403, description="Open the payment page on the same device used to place the order.")
+        stamp = now_ist().isoformat(timespec="seconds")
+        with get_db() as con:
+            changed = con.execute(
+                """UPDATE daily_orders SET payment_status='pending_verification',
+                   payment_reported_at=?,updated_at=?
+                   WHERE order_ref=? AND payment_status='unpaid'
+                   AND deleted_at IS NULL AND status!='cancelled'""",
+                (stamp, stamp, order_ref),
+            ).rowcount
+        if changed:
+            send_daily_payment_report(order)
+            flash("Payment reported. Thank you! We'll verify it. Delivery is already confirmed.", "success")
+        return redirect(url_for("daily_confirmation", order_ref=order_ref), code=303)
 
     @app.get("/daily/qr/<order_ref>.png")
     def daily_payment_qr(order_ref):
@@ -412,6 +441,7 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
             "portions": sum(r["portions"] for r in valid),
             "value": sum(r["total_price"] for r in valid),
             "unpaid": sum(r["payment_status"] != "paid" for r in valid),
+            "reported": sum(r["payment_status"] == "pending_verification" for r in valid),
             "morning": sum(r["portions"] for r in valid if r["delivery_slot"] == "morning"),
             "afternoon": sum(r["portions"] for r in valid if r["delivery_slot"] == "afternoon"),
         }
@@ -486,7 +516,7 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
         with get_db() as con:
             cur = con.execute(
                 """UPDATE daily_orders SET payment_status='paid',payment_method=?,
-                   paid_at=?,updated_at=? WHERE order_ref=? AND payment_status='unpaid'
+                   paid_at=?,updated_at=? WHERE order_ref=? AND payment_status IN ('unpaid','pending_verification')
                    AND deleted_at IS NULL AND status!='cancelled'""",
                 (method, stamp, stamp, order_ref))
         if not cur.rowcount and not order_by_ref(order_ref):

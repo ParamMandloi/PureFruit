@@ -187,3 +187,22 @@ def send_daily_order_alert(order):
         "Manage: https://www.purefruit.in/staff/daily",
     ])
     return _send_text(token, chat_id, message)
+
+def send_daily_payment_report(order):
+    """Customer said they paid. Staff must check the actual bank credit."""
+    token, chat_id = _config()
+    if not token or not chat_id:
+        return False
+    lines = [
+        "PureFruit | CUSTOMER REPORTS PAYMENT — VERIFY BANK CREDIT",
+        "Order: " + _safe(order.get("order_ref")),
+        "Customer: " + _safe(order.get("name"), 70) +
+            " | Mobile: " + _safe(order.get("phone"), 20),
+        "Amount to verify: ₹" + _safe(order.get("total_price")),
+        "Juice: " + _safe(order.get("juice")) +
+            " | " + _safe(order.get("portions")) + " portion(s)",
+        "Location: " + _safe(order.get("building_flat"), 80),
+        "Delivery is confirmed regardless of payment.",
+        "Staff: https://www.purefruit.in/staff/daily",
+    ]
+    return _send_text(token, chat_id, "\n".join(lines))

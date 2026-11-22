@@ -96,7 +96,8 @@ class DailyOrdersTest(unittest.TestCase):
         self.assertEqual(orders[0]["payment_status"], "unpaid")
         self.assertEqual(orders[0]["building_flat"], "Tower B / 1204")
         thanks = self.client.get(response.headers["Location"])
-        self.assertIn(b"Order request saved", thanks.data)
+        self.assertIn(b"Order confirmed", thanks.data)
+        self.assertIn(b"whether you pay now or later", thanks.data)
         # A repeated POST with the same nonce never creates a duplicate.
         repeat = self.client.post("/", data=fields)
         self.assertEqual(repeat.status_code, 303)
@@ -191,11 +192,67 @@ class DailyOrdersTest(unittest.TestCase):
         self.assertIn(b"upi://pay?pa=9619140077-huf%40ybl", page.data)
         self.assertIn(b"phonepe://pay?pa=9619140077-huf%40ybl", page.data)
         self.assertIn(b"tez://upi/pay?pa=9619140077-huf%40ybl", page.data)
-        self.assertIn(b"Payment is <strong>not yet verified</strong>", page.data)
+        self.assertIn(b"Order confirmed", page.data)
+        self.assertIn(b"I've made payment", page.data)
+        self.assertNotIn(b'href="upi://pay?', page.data)
+        self.assertNotIn(b'wa.me/', page.data)
         ref = order.headers["Location"].rsplit("/", 1)[-1]
         qr = self.client.get("/daily/qr/"+ref+".png")
         self.assertEqual(qr.status_code, 200)
         self.assertEqual(qr.content_type, "image/png")
+
+    def test_payment_made_reports_only_and_does_not_hold_delivery(self):
+        self.open_menu()
+        placed = self.client.post("/", data=self.form_fields(), follow_redirects=False)
+        self.assertEqual(placed.status_code, 303)
+        ref = placed.headers["Location"].rsplit("/", 1)[-1]
+        with self.client.session_transaction() as sess:
+            csrf = sess["csrf_token"]
+        path = "/daily/thanks/" + ref + "/payment-made"
+        reported = self.client.post(path, data={"csrf_token": csrf}, follow_redirects=False)
+        self.assertEqual(reported.status_code, 303)
+        with app_module.get_db() as con:
+            row = con.execute(
+                "SELECT payment_status,payment_reported_at,paid_at,status FROM daily_orders WHERE order_ref=?",
+                (ref,)).fetchone()
+        self.assertEqual(row["payment_status"], "pending_verification")
+        self.assertIsNotNone(row["payment_reported_at"])
+        self.assertIsNone(row["paid_at"])
+        self.assertEqual(row["status"], "new")
+        thanks = self.client.get(reported.headers["Location"])
+        self.assertIn(b"Payment reported", thanks.data)
+        self.assertIn(b"delivery is already confirmed", thanks.data.lower())
+        self.assertNotIn(b"wa.me/", thanks.data)
+        # Repeated tapping is safe.
+        self.assertEqual(self.client.post(path, data={"csrf_token": csrf}).status_code, 303)
+        with app_module.get_db() as con:
+            self.assertEqual(con.execute(
+                "SELECT COUNT(*) FROM daily_orders WHERE payment_status='pending_verification'"
+            ).fetchone()[0], 1)
+        # Staff alone can verify actual payment; customer click cannot.
+        staff_csrf = self.staff_login()
+        confirmed = self.client.post("/staff/daily/order/"+ref+"/paid",
+            data={"csrf_token": staff_csrf, "verified": "yes",
+                  "payment_method": "upi", "date": self.service_date})
+        self.assertEqual(confirmed.status_code, 302)
+        with app_module.get_db() as con:
+            paid = con.execute("SELECT payment_status,paid_at FROM daily_orders WHERE order_ref=?", (ref,)).fetchone()
+        self.assertEqual(paid["payment_status"], "paid")
+        self.assertIsNotNone(paid["paid_at"])
+
+    def test_payment_report_requires_same_browser_and_csrf(self):
+        self.open_menu()
+        placed = self.client.post("/", data=self.form_fields(), follow_redirects=False)
+        ref = placed.headers["Location"].rsplit("/", 1)[-1]
+        path = "/daily/thanks/" + ref + "/payment-made"
+        without_csrf = self.client.post(path)
+        self.assertEqual(without_csrf.status_code, 403)
+        other_browser = app.test_client()
+        other_browser.get("/")
+        with other_browser.session_transaction() as sess:
+            other_csrf = sess["csrf_token"]
+        rejected = other_browser.post(path, data={"csrf_token": other_csrf})
+        self.assertEqual(rejected.status_code, 403)
 
     def test_mobile_and_name_are_required(self):
         self.open_menu()
