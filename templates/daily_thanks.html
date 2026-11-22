@@ -33,7 +33,7 @@ img{display:block;max-width:230px;width:100%;margin:15px auto}
   <p class="success"><strong>Payment reported — thank you!</strong><br>Our team will check the bank credit. Your delivery is already confirmed. Please don't pay a second time unless we contact you.</p>
 {% else %}
   <h2 style="font-size:18px;margin:0 0 6px">Optional UPI payment</h2>
-  <p class="note">Your order is confirmed whether you pay now or later. Choose your payment app below.</p>
+  <p class="note">Your order is confirmed whether you pay now or later. Pay using the mobile number or UPI QR below.</p>
   <p class="amount">₹{{ order.total_price }}</p>
   <p class="note">{{ order.portions }} portion(s) × ₹{{ order.unit_price }} per portion = <strong>₹{{ order.total_price }}</strong></p>
   <div class="mobile-pay" aria-label="Recommended payment using mobile number">
