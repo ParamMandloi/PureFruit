@@ -253,7 +253,7 @@ class DailyOrdersTest(unittest.TestCase):
                 self.assertIn("pa=9619140077-huf%40ybl", phonepe)
                 self.assertNotIn("tr=", phonepe)
                 self.assertNotIn("mode=", phonepe)
-                self.assertIn(phonepe.replace("&", "&amp;").encode("utf-8"), page.data)
+                self.assertNotIn(b"phonepe://pay?", page.data)
 
     def test_limit_is_1000_orders_and_10_portions(self):
         self.assertEqual(MAX_DAILY_ORDERS, 1000)
