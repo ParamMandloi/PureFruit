@@ -222,6 +222,69 @@ class DailyOrdersTest(unittest.TestCase):
         self.assertIn("pa=9619140077-huf%40ybl", uri)
         self.assertIn("cu=INR", uri)
 
+    def test_amount_matches_portions_in_db_page_and_qr(self):
+        self.open_menu()
+        for qty in (1, 2, 5, 10, 30):
+            with self.subTest(qty=qty):
+                fields = self.form_fields()
+                fields["portions"] = str(qty)
+                response = self.client.post("/", data=fields, follow_redirects=False)
+                self.assertEqual(response.status_code, 303)
+                ref = response.headers["Location"].rsplit("/", 1)[-1]
+                with app_module.get_db() as con:
+                    row = con.execute(
+                        "SELECT portions,unit_price,total_price FROM daily_orders WHERE order_ref=?",
+                        (ref,)
+                    ).fetchone()
+                self.assertEqual(row["portions"], qty)
+                self.assertEqual(row["unit_price"], 99)
+                self.assertEqual(row["total_price"], qty * 99)
+                page = self.client.get(response.headers["Location"])
+                self.assertIn(f"Total ({qty} × ₹99)".encode("utf-8"), page.data)
+                self.assertIn(f'₹{qty*99}'.encode("utf-8"), page.data)
+                self.assertIn(f'id="upi-amount">{qty*99}</span>'.encode("utf-8"), page.data)
+                qr = build_order_qr_uri(
+                    app_module.UPI_PAYEE_ADDRESS, app_module.UPI_PAYEE_NAME,
+                    {"total_price": row["total_price"], "order_ref": ref},
+                )
+                self.assertIn(f"am={qty*99:.2f}", qr)
+
+    def test_amount_respects_price_saved_at_order_time(self):
+        self.open_menu()
+        with app_module.get_db() as con:
+            con.execute(
+                "UPDATE daily_menus SET unit_price=115,updated_at='price-v2' WHERE service_date=?",
+                (self.service_date,),
+            )
+        fields = self.form_fields()
+        fields["portions"] = "4"
+        response = self.client.post("/", data=fields, follow_redirects=False)
+        self.assertEqual(response.status_code, 303)
+        ref = response.headers["Location"].rsplit("/", 1)[-1]
+        with app_module.get_db() as con:
+            row = con.execute(
+                "SELECT portions,unit_price,total_price FROM daily_orders WHERE order_ref=?",
+                (ref,),
+            ).fetchone()
+        self.assertEqual(row["total_price"], 460)
+        self.assertEqual(row["unit_price"], 115)
+        page = self.client.get(response.headers["Location"])
+        self.assertIn("Total (4 × ₹115)".encode("utf-8"), page.data)
+        self.assertIn(b'id="upi-amount">460</span>', page.data)
+        uri = build_order_qr_uri(
+            app_module.UPI_PAYEE_ADDRESS, app_module.UPI_PAYEE_NAME,
+            {"total_price": row["total_price"], "order_ref": ref},
+        )
+        self.assertIn("am=460.00", uri)
+        # Changing today's menu after booking must not alter amount due.
+        with app_module.get_db() as con:
+            con.execute(
+                "UPDATE daily_menus SET unit_price=99,updated_at='price-v3' WHERE service_date=?",
+                (self.service_date,),
+            )
+        self.assertIn(b'id="upi-amount">460</span>',
+                      self.client.get(response.headers["Location"]).data)
+
     def test_payment_made_reports_only_and_does_not_hold_delivery(self):
         self.open_menu()
         placed = self.client.post("/", data=self.form_fields(), follow_redirects=False)

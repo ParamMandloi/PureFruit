@@ -29,7 +29,7 @@ img{display:block;max-width:230px;width:100%;margin:15px auto}
 <div class="line"><span>Date</span><strong>{{ order.service_date }}</strong></div>
 <div class="line"><span>Slot</span><strong>{{ slots.get(order.delivery_slot, order.delivery_slot) }}</strong></div>
 <div class="line"><span>Delivery</span><strong>{{ order.building_flat }}</strong></div>
-<div class="line"><span>Amount</span><strong>₹{{ order.total_price }}</strong></div>
+<div class="line"><span>Total ({{ order.portions }} × ₹{{ order.unit_price }})</span><strong>₹{{ order.total_price }}</strong></div>
 <section class="optional" aria-label="Optional payment">
 {% if order.payment_status == 'paid' %}
   <p class="ok">✓ Payment received and verified</p>
@@ -38,12 +38,14 @@ img{display:block;max-width:230px;width:100%;margin:15px auto}
 {% else %}
   <h2 style="font-size:18px;margin:0 0 6px">Optional UPI payment</h2>
   <p class="note">Your order is confirmed whether you pay now or later. Choose your payment app below.</p>
-  <p class="amount" id="pay-amount">₹{{ order.total_price }}</p>
+  <p class="amount">₹{{ order.total_price }}</p>
+  <p class="note">{{ order.portions }} portion(s) × ₹{{ order.unit_price }} per portion = <strong>₹{{ order.total_price }}</strong></p>
   <div class="mobile-pay" aria-label="Recommended payment using mobile number">
     <h3>✓ Recommended: Pay to mobile number</h3>
     <strong id="upi-mobile">{{ pay_mobile_number }}</strong>
     <button id="copy-mobile" type="button">Copy number</button>
-    <small>Open PhonePe or Google Pay → Pay to mobile number → paste the number → enter ₹{{ order.total_price }}.</small>
+    <small>Open PhonePe or Google Pay → Pay to mobile number → paste the number → enter <strong>₹{{ order.total_price }}</strong>.</small>
+    <small>Amount to enter: <strong>₹<span id="upi-amount">{{ order.total_price }}</span></strong> <button id="copy-amount" type="button">Copy amount</button></small>
     <small>Before paying, confirm that the recipient and receiving account are the ones intended for PureFruit. A mobile payment may reach a different UPI-linked account than the HUF ID.</small>
   </div>
   <div class="app-options" aria-label="Open UPI payment app to pay by mobile number">
@@ -94,6 +96,7 @@ img{display:block;max-width:230px;width:100%;margin:15px auto}
   }
   copyValue('copy-upi','upi-address','Copy UPI ID');
   copyValue('copy-mobile','upi-mobile','Copy mobile number');
+  copyValue('copy-amount','upi-amount','Copy payment amount');
   // The app buttons are app-launch shortcuts, not payment requests. Copy
   // the verified recipient phone number during the user's tap. The app may
   // reject the custom launch scheme on some browsers; manual copy remains.
