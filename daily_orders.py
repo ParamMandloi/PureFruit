@@ -97,6 +97,7 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
         slots = allowed_slots(current_menu)
         nonce = secrets.token_hex(16)
         session["daily_nonce"] = nonce
+        session["daily_menu_version"] = current_menu["updated_at"]
         response = app.make_response((render_template(
             "daily.html", csrf=csrf_token(), nonce=nonce, menu=current_menu,
             image=JUICES.get(current_menu["juice"], ""), slots=slots, error=error
@@ -105,6 +106,7 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
         return response
 
     @app.route("/daily", methods=["GET", "POST"])
+    @app.route("/", methods=["GET", "POST"])
     def daily_order_page():
         current_menu = menu()
         if request.method == "GET":
@@ -113,6 +115,8 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
         if request.form.get("website"):
             abort(400)
         nonce = request.form.get("nonce", "")
+        if session.get("daily_menu_version") != current_menu["updated_at"]:
+            return render_form(current_menu, "Today’s menu changed. Please check the juice and resubmit.", 409)
         if not re.fullmatch(r"[0-9a-f]{32}", nonce) or nonce != session.get("daily_nonce"):
             abort(403)
         # Idempotency: refreshing / double-tapping cannot create a second order.
@@ -192,6 +196,7 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
         return response
 
     @app.get("/staff/daily")
+    @app.get("/staff")
     @staff_only
     def daily_admin():
         current_menu = menu()
