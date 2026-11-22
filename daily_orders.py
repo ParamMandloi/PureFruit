@@ -328,11 +328,25 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
         order = order_by_ref(order_ref)
         if not order or order.get("deleted_at"):
             abort(404)
-        # Orders are booked before payment. Avoid mobile-app deep links that may
-        # trigger payer-side security declines for this non-merchant VPA.
+        # Match the original working /subscriptions payment button flow:
+        # 1. Build an amount-prefilled UPI mobile intent (mode=04).
+        # 2. Change only the scheme to phonepe://pay or tez://upi/pay.
+        # The recipient stays the current, explicitly selected HUF VPA.
+        params = [
+            ("pa", upi_payee_address),
+            ("pn", upi_payee_name),
+            ("am", f'{order["total_price"]:.2f}'),
+            ("cu", "INR"),
+            ("tr", order_ref),
+            ("tn", f"PureFruit {order_ref}"),
+            ("mode", "04"),
+        ]
+        intent = "upi://pay?" + urlencode(params)
         response = app.make_response(render_template(
             "daily_thanks.html", order=order, slots=SLOTS,
             csrf=csrf_token(), payment_address=upi_payee_address,
+            phonepe_link="phonepe://pay" + intent[len("upi://pay"):],
+            gpay_link="tez://upi/pay" + intent[len("upi://pay"):],
         ))
         response.headers["Cache-Control"] = "private, no-store"
         return response

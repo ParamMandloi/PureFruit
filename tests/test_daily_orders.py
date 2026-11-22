@@ -181,7 +181,7 @@ class DailyOrdersTest(unittest.TestCase):
         with app_module.get_db() as con:
             self.assertIsNone(con.execute("SELECT archived_at FROM daily_orders WHERE order_ref='TEST-0'").fetchone()[0])
 
-    def test_manual_upi_payment_is_available_without_app_deep_links(self):
+    def test_restored_old_phonepe_gpay_buttons_and_manual_fallback(self):
         self.open_menu()
         order = self.client.post("/", data=self.form_fields(), follow_redirects=False)
         self.assertEqual(order.status_code, 303)
@@ -195,8 +195,16 @@ class DailyOrdersTest(unittest.TestCase):
         self.assertIn(b"Open QR image to save", page.data)
         self.assertIn(b"Order confirmed", page.data)
         self.assertIn(b"I've made payment", page.data)
-        for prefix in (b"upi://", b"phonepe://", b"tez://", b"wa.me/"):
-            self.assertNotIn(prefix, page.data)
+        # Earlier subscription flow: same app URI prefixes and mobile mode=04.
+        self.assertIn(b"Pay with PhonePe", page.data)
+        self.assertIn(b"Pay with Google Pay", page.data)
+        self.assertIn(b"phonepe://pay?pa=9619140077-huf%40ybl", page.data)
+        self.assertIn(b"tez://upi/pay?pa=9619140077-huf%40ybl", page.data)
+        self.assertIn(b"mode=04", page.data)
+        self.assertIn(b"am=297.00", page.data)
+        self.assertIn(b"pn=PARAMPRAKASH+RAJENDRA+MANDLOI+KARTA", page.data)
+        self.assertNotIn(b'href="upi://pay?', page.data)
+        self.assertNotIn(b"wa.me/", page.data)
         ref = order.headers["Location"].rsplit("/", 1)[-1]
         qr = self.client.get("/daily/qr/"+ref+".png")
         self.assertEqual(qr.status_code, 200)
