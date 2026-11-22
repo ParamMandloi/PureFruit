@@ -14,7 +14,7 @@ small,.muted{color:#717171}.alert{background:#eaf5ed;padding:10px;border-radius:
 @media(max-width:700px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.wrap{padding:12px}.card{padding:12px}.table-wrap{overflow-x:auto}table{min-width:670px}}
 </style></head><body><main class="wrap">
 <header><div><h1>PureFruit · Daily Orders</h1><small>Separate from subscription orders</small></div>
-<div class="actions"><a class="button alt" href="{{ url_for('staff_dashboard') }}">Subscriptions</a><a class="button alt" href="{{ public_url }}" target="_blank" rel="noopener">Open order form</a><a class="button alt" href="{{ url_for('daily_export', date=selected) }}">Export CSV</a></div></header>
+<div class="actions"><a class="button alt" href="{{ url_for('staff_dashboard') }}">Subscriptions / old orders</a><a class="button alt" href="{{ public_url }}" target="_blank" rel="noopener">Open order form</a><a class="button alt" href="{{ url_for('daily_export', date=selected) }}">Export CSV</a></div></header>
 {% with messages=get_flashed_messages(with_categories=true) %}{% for category,message in messages %}<div class="alert">{{ message }}</div>{% endfor %}{% endwith %}
 <section class="card">
 <h2>Today's juice / customer link</h2>
