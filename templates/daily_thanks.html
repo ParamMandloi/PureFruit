@@ -46,11 +46,11 @@ img{display:block;max-width:230px;width:100%;margin:15px auto}
     <small>Open PhonePe or Google Pay → Pay to mobile number → paste the number → enter ₹{{ order.total_price }}.</small>
     <small>Before paying, confirm that the recipient and receiving account are the ones intended for PureFruit. A mobile payment may reach a different UPI-linked account than the HUF ID.</small>
   </div>
-  <div class="app-options" aria-label="Try direct UPI payment to HUF ID">
-    <a id="upi-phonepe" href="{{ phonepe_link }}">Pay with PhonePe</a>
-    <a id="upi-gpay" href="{{ gpay_link }}">Pay with Google Pay</a>
+  <div class="app-options" aria-label="Open UPI payment app to pay by mobile number">
+    <a id="upi-phonepe" href="phonepe://native" data-mobile-launch="true">Open PhonePe</a>
+    <a id="upi-gpay" href="tez://" data-mobile-launch="true">Open Google Pay</a>
   </div>
-  <p class="note">Direct app buttons use the HUF UPI ID, which may still be blocked by the payment provider. If declined, use the mobile-number method above instead; do not repeatedly retry a declined transaction.</p>
+  <p class="note" id="app-instructions">These buttons try to open your chosen UPI app and copy the mobile number. In the app, select <strong>Pay to mobile number</strong>, paste <strong>9619140077</strong> and enter <strong>₹{{ order.total_price }}</strong>. They do not start a payment to the HUF UPI ID. If an app does not open, use the Copy Number button and open the app normally.</p>
   <div class="recipient">UPI ID: <strong id="upi-address">{{ payment_address }}</strong>
     <button class="copy" id="copy-upi" type="button" aria-label="Copy PureFruit UPI ID">Copy UPI ID</button>
     <br><small>Bank-registered recipient: PARAMPRAKASH RAJENDRA MANDLOI KARTA</small>
@@ -59,7 +59,7 @@ img{display:block;max-width:230px;width:100%;margin:15px auto}
   <div class="instructions">
     <strong>Alternatively, pay manually (UPI ID or QR)</strong>
     <ol>
-      <li>If a payment button fails or is declined, open PhonePe or Google Pay yourself.</li>
+      <li>If the app-launch button does not open your payment app, open PhonePe or Google Pay manually.</li>
       <li>Select <strong>Pay to UPI ID</strong> and paste the copied ID, or scan the QR below from inside the app.</li>
       <li>Check that the order amount is <strong>₹{{ order.total_price }}</strong> and verify the bank-registered recipient before paying.</li>
     </ol>
@@ -69,7 +69,7 @@ img{display:block;max-width:230px;width:100%;margin:15px auto}
   <img src="{{ url_for('daily_payment_qr', order_ref=order.order_ref) }}" alt="Recipient UPI QR with ₹{{ order.total_price }} prefilled">
   <p class="qr-action"><a href="{{ url_for('daily_payment_qr', order_ref=order.order_ref) }}" target="_blank" rel="noopener">Open QR image to save</a></p>
   <details class="note"><summary>Payment declined?</summary>
-    <p>Try using Copy UPI ID or the QR from inside PhonePe or Google Pay instead of using the direct payment button. If that is also declined, don't keep retrying; the bank/UPI provider may be blocking the transfer. Your order remains confirmed for delivery.</p>
+    <p>Use the mobile-number route (9619140077), which has been tested with the intended account. If that is also declined, don't keep retrying; the bank or UPI provider may be blocking the transfer. Your order remains confirmed for delivery.</p>
   </details>
   <form method="post" action="{{ url_for('daily_report_payment', order_ref=order.order_ref) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf }}">
@@ -94,6 +94,17 @@ img{display:block;max-width:230px;width:100%;margin:15px auto}
   }
   copyValue('copy-upi','upi-address','Copy UPI ID');
   copyValue('copy-mobile','upi-mobile','Copy mobile number');
+  // The app buttons are app-launch shortcuts, not payment requests. Copy
+  // the verified recipient phone number during the user's tap. The app may
+  // reject the custom launch scheme on some browsers; manual copy remains.
+  document.querySelectorAll('[data-mobile-launch="true"]').forEach(function(link){
+    link.addEventListener('click',function(){
+      var value=document.getElementById('upi-mobile');
+      if(value && navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(value.textContent.trim()).catch(function(){});
+      }
+    });
+  });
 })();
 </script>
 </section></main></body></html>

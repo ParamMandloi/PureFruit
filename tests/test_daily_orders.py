@@ -195,18 +195,18 @@ class DailyOrdersTest(unittest.TestCase):
         self.assertIn(b"Open QR image to save", page.data)
         self.assertIn(b"Order confirmed", page.data)
         self.assertIn(b"I've made payment", page.data)
-        # Earlier subscription flow: same app URI prefixes and mobile mode=04.
-        self.assertIn(b"Pay with PhonePe", page.data)
-        self.assertIn(b"Pay with Google Pay", page.data)
+        # The direct HUF UPI intent was rejected by payment apps.
+        # Launch the app and copy the verified mobile payee number instead.
+        self.assertIn(b"Open PhonePe", page.data)
+        self.assertIn(b"Open Google Pay", page.data)
         self.assertIn(b"Recommended: Pay to mobile number", page.data)
         self.assertIn(b"9619140077", page.data)
         self.assertIn(b"Copy number", page.data)
         self.assertIn(b"QR amount: ", page.data)
-        self.assertIn(b"phonepe://pay?pa=9619140077-huf%40ybl", page.data)
-        self.assertIn(b"tez://upi/pay?pa=9619140077-huf%40ybl", page.data)
-        self.assertIn(b"mode=04", page.data)
-        self.assertIn(b"am=297.00", page.data)
-        self.assertIn(b"pn=PARAMPRAKASH+RAJENDRA+MANDLOI+KARTA", page.data)
+        self.assertIn(b'href="phonepe://native"', page.data)
+        self.assertIn(b'href="tez://"', page.data)
+        self.assertNotIn(b"phonepe://pay?", page.data)
+        self.assertNotIn(b"tez://upi/pay?", page.data)
         self.assertNotIn(b'href="upi://pay?', page.data)
         self.assertNotIn(b"wa.me/", page.data)
         ref = order.headers["Location"].rsplit("/", 1)[-1]
