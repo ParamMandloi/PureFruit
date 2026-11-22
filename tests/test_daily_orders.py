@@ -71,6 +71,8 @@ class DailyOrdersTest(unittest.TestCase):
         self.assertIn(b"not yet verified", thanks.data)
 
     def test_main_routes_use_daily_checkout(self):
+        with app_module.get_db() as con:
+            con.execute("UPDATE daily_menu SET is_open=1 WHERE id=1")
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Portions", response.data)
