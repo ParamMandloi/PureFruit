@@ -24,6 +24,13 @@ th{font-size:11px;letter-spacing:.04em;color:#777;text-transform:uppercase}
 .danger{background:#fff0ed;color:#a02c27}.flash{background:#edf6eb;padding:12px;border-radius:9px}
 .paid{color:#1a8141;font-weight:700}.unpaid{color:#98691a;font-weight:700}
 .tip{font-size:12px;color:#777;margin:8px 0}
+.type-badge{display:inline-block;padding:3px 9px;border-radius:7px;font-size:12px;font-weight:800;letter-spacing:.02em;margin:5px 0 3px}
+.type-badge.actual{color:#4d555b;background:#ecefed}
+.type-badge.test{color:#8e4915;background:#fff0d8}
+.type-form{border-top:1px dashed #e8e8e3;margin-top:9px;padding-top:8px}
+.type-form label{color:#555}
+.order-table tr.test-order{background:#fffaf3}
+.danger{border:1px solid #dfb7a9;font-weight:750}
 /* Staff delivery prep: slot and portion count are primary, glanceable values. */
 .order-table{min-width:0!important}
 .order-table .big-slot{display:block;font-size:25px;line-height:1.12;font-weight:850;white-space:nowrap;letter-spacing:-.6px;color:#202020}
@@ -116,10 +123,10 @@ main{padding:12px}.box{padding:13px}.stat-grid{grid-template-columns:repeat(2,mi
   </form>
   {% endif %}
   <div class="table-wrap"><table class="order-table"><thead>
-    <tr><th>Delivery slot / Flat</th><th>Portions / Juice</th><th>Customer</th><th>Payment</th><th>Status / Delete</th></tr>
+    <tr><th>Delivery slot / Flat</th><th>Portions / Juice</th><th>Customer</th><th>Payment</th><th>Fulfillment / Actual or Test</th></tr>
   </thead><tbody>
     {% for order in rows %}
-    <tr>
+    <tr class="{{ 'test-order' if order.order_type=='test' else 'actual-order' }}">
       <td class="slot-cell">
         <span class="big-slot">{{ slots[order.delivery_slot] }}</span>
         <span class="flat-name">{{ order.building_flat }}</span>
@@ -158,20 +165,31 @@ main{padding:12px}.box{padding:13px}.stat-grid{grid-template-columns:repeat(2,mi
           <select name="status">{% for status in statuses %}<option value="{{ status }}" {% if order.status==status %}selected{% endif %}>{{ status|title }}</option>{% endfor %}</select>
           <button type="submit" class="secondary">Save</button>
         </form>
-        {% if order.payment_status=='unpaid' and order.status=='new' %}
-        <form class="action-form" method="post" action="{{ url_for('daily_delete_order',order_ref=order.order_ref) }}"
-              onsubmit="return confirm('Remove this unpaid order from the active list? Payment and audit records will be retained.');">
-          <input type="hidden" name="csrf_token" value="{{ csrf }}"><input type="hidden" name="date" value="{{ selected }}">
-          <input type="hidden" name="confirm_ref" value="{{ order.order_ref }}">
-          <button class="danger" type="submit">Delete order</button>
-        </form>
-        {% endif %}
+        <div class="type-form">
+          <span class="type-badge {{ order.order_type }}">{{ 'TEST' if order.order_type=='test' else 'ACTUAL' }}</span>
+          <form class="action-form" method="post" action="{{ url_for('daily_update_order_type',order_ref=order.order_ref) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf }}"><input type="hidden" name="date" value="{{ order.service_date }}">
+            <select name="order_type" aria-label="Order type for {{ order.order_ref }}">
+              <option value="actual" {% if order.order_type=='actual' %}selected{% endif %}>Actual</option>
+              <option value="test" {% if order.order_type=='test' %}selected{% endif %}>Test</option>
+            </select>
+            <button class="secondary" type="submit">Save type</button>
+          </form>
+          {% if order.order_type=='test' and order.payment_status!='paid' and not order.paid_at %}
+          <form class="action-form" method="post" action="{{ url_for('daily_delete_order',order_ref=order.order_ref) }}"
+                onsubmit="return confirm('Delete this TEST order from the working list? Its record is retained for audit. Paid orders cannot be deleted.');">
+            <input type="hidden" name="csrf_token" value="{{ csrf }}"><input type="hidden" name="date" value="{{ order.service_date }}">
+            <input type="hidden" name="confirm_ref" value="{{ order.order_ref }}">
+            <button class="danger" type="submit">Delete test</button>
+          </form>
+          {% endif %}
+        </div>
         {% endif %}
       </td>
     </tr>
     {% else %}<tr><td colspan="5">No {{ 'archived' if view=='archived' else 'active' }} orders here.</td></tr>{% endfor %}
   </tbody></table></div>
-  <p class="tip">Clear old orders moves past delivery dates into Archived orders without deleting payment or customer history. Individual Delete remains available only for new, unpaid orders.</p>
+  <p class="tip">New orders are marked Actual. Staff can change an order to Test, then use Delete test. Only Test orders without verified payments can be deleted; paid orders are protected. Removed records remain in the database for audit.</p>
 </section>
 <section class="box">
   <h2>Customer-wise summary</h2>

@@ -70,6 +70,32 @@ def slots_for_date(target, now):
 
 
 
+# One-time, reference-specific cleanup requested from the 23 Nov staff screenshot.
+# Never bulk-delete orders based on payment status alone.
+REQUESTED_TEST_CLEANUP_REFS = (
+    "PFD-261122-90762390F949",
+    "PFD-261122-75BA5D79B061",
+    "PFD-261122-198F10F5CD19",
+    "PFD-261123-08F47183A39F",
+)
+
+
+def retire_screenshot_test_orders(con, stamp):
+    """Hide exactly the identified test orders; never touch a paid order.
+
+    This is repeat-safe on app startup and preserves records for auditing.
+    """
+    placeholders = ",".join("?" for _ in REQUESTED_TEST_CLEANUP_REFS)
+    query = f"""UPDATE daily_orders SET
+        order_type='test', deleted_at=?,
+        deleted_reason='User-requested screenshot test cleanup',
+        status='cancelled', updated_at=?
+        WHERE order_ref IN ({placeholders})
+        AND deleted_at IS NULL
+        AND payment_status!='paid' AND paid_at IS NULL"""
+    return con.execute(query, (stamp, stamp, *REQUESTED_TEST_CLEANUP_REFS)).rowcount
+
+
 def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
                           staff_only, csv_response, upi_payee_address, upi_payee_name):
     """Register daily routes without changing the existing subscriptions."""
@@ -100,6 +126,7 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
             unit_price INTEGER NOT NULL, total_price INTEGER NOT NULL,
             delivery_slot TEXT NOT NULL, building_flat TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'new',
+            order_type TEXT NOT NULL DEFAULT 'actual' CHECK(order_type IN ('actual','test')),
             payment_status TEXT NOT NULL DEFAULT 'unpaid',
             payment_method TEXT NOT NULL DEFAULT '', paid_at TEXT,
             updated_at TEXT NOT NULL
@@ -114,6 +141,8 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
             ("payment_reported_at", "TEXT"),
             ("archived_at", "TEXT"),
             ("archived_reason", "TEXT NOT NULL DEFAULT ''"),
+            ("order_type", "TEXT NOT NULL DEFAULT 'actual' CHECK(order_type IN ('actual','test'))"),
+            ("order_type_changed_at", "TEXT"),
         ):
             if col not in columns:
                 con.execute(f"ALTER TABLE daily_orders ADD COLUMN {col} {specification}")
@@ -141,6 +170,9 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
         con.execute("CREATE INDEX IF NOT EXISTS daily_orders_customer_idx ON daily_orders(customer_id)")
         con.execute("CREATE INDEX IF NOT EXISTS daily_orders_phone_idx ON daily_orders(phone)")
         con.execute("CREATE INDEX IF NOT EXISTS daily_orders_archive_idx ON daily_orders(archived_at, service_date)")
+        # Restrict cleanup to the exact four references in the user's screenshot.
+        # A row remains untouched if staff has verified payment since then.
+        retire_screenshot_test_orders(con, now_ist().isoformat(timespec="seconds"))
 
     def menus_for_dates(days=None):
         dates = days or service_days()
@@ -543,10 +575,34 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
             abort(404)
         return redirect(url_for("daily_admin", date=request.form.get("date", "")))
 
+    @app.post("/staff/daily/order/<order_ref>/type")
+    @staff_only
+    def daily_update_order_type(order_ref):
+        """Allow staff to distinguish genuine daily orders from test requests."""
+        require_csrf()
+        new_type = request.form.get("order_type", "")
+        if new_type not in ("actual", "test"):
+            abort(400, description="Choose Actual or Test.")
+        stamp = now_ist().isoformat(timespec="seconds")
+        with get_db() as con:
+            result = con.execute(
+                """UPDATE daily_orders SET order_type=?,order_type_changed_at=?,
+                   updated_at=? WHERE order_ref=? AND deleted_at IS NULL""",
+                (new_type, stamp, stamp, order_ref),
+            )
+        if not result.rowcount:
+            abort(404)
+        flash(f"Order {order_ref} marked {new_type.title()}.", "success")
+        return redirect(url_for("daily_admin", date=request.form.get("date", "")))
+
     @app.post("/staff/daily/order/<order_ref>/delete")
     @staff_only
     def daily_delete_order(order_ref):
-        """Soft delete only an unpaid, unfulfilled order; preserve financial audit."""
+        """Soft-delete staff-classified Test orders only, never verified payments.
+
+        A customer-reported payment is not verified bank credit and may belong
+        to a test; retain its original payment status in the audit record.
+        """
         require_csrf()
         if request.form.get("confirm_ref") != order_ref:
             abort(400, description="Order reference confirmation is required.")
@@ -558,15 +614,17 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
             ).fetchone()
             if not existing:
                 abort(404)
-            if (existing["payment_status"] != "unpaid" or existing["paid_at"] or
-                    existing["deleted_at"] or existing["status"] != "new"):
-                flash("Only new, unpaid, not-yet-deleted orders can be deleted. Paid and prepared orders are protected.", "error")
+            if (existing["order_type"] != "test" or
+                    existing["payment_status"] == "paid" or existing["paid_at"] or
+                    existing["deleted_at"]):
+                flash("Only Test orders without verified payments can be deleted. Actual and paid orders are protected.", "error")
                 return redirect(url_for("daily_admin", date=request.form.get("date", "")))
             con.execute(
-                """UPDATE daily_orders SET deleted_at=?,deleted_reason='Staff removed request',
+                """UPDATE daily_orders SET deleted_at=?,
+                   deleted_reason='Staff deleted classified Test order',
                    status='cancelled',updated_at=? WHERE order_ref=?""",
                 (stamp, stamp, order_ref))
-        flash("Order deleted from active list. An audit record is retained.", "success")
+        flash("Test order removed from the dashboard. An audit record is retained.", "success")
         return redirect(url_for("daily_admin", date=request.form.get("date", "")))
 
     @app.post("/staff/daily/archive-old")
@@ -625,5 +683,6 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
             ("portions", "Portions"), ("unit_price", "Unit price INR"),
             ("total_price", "Total INR"), ("delivery_slot", "Slot"),
             ("building_flat", "Building / Flat"), ("status", "Fulfillment"),
-            ("payment_status", "Payment"), ("payment_method", "Payment method"))]
+            ("payment_status", "Payment"), ("payment_method", "Payment method"),
+            ("order_type", "Actual or Test"))]
         return csv_response(rows, "purefruit-daily-" + selected + ".csv", fields)

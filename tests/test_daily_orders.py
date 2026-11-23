@@ -14,7 +14,9 @@ os.environ.pop("TELEGRAM_BOT_TOKEN", None)
 os.environ.pop("TELEGRAM_CHAT_ID", None)
 
 app_module = importlib.import_module("app")
-from daily_orders import MAX_DAILY_ORDERS, slots_for_date, build_order_qr_uri, build_phonepe_payment_uri
+from daily_orders import (MAX_DAILY_ORDERS, slots_for_date, build_order_qr_uri,
+                          build_phonepe_payment_uri, REQUESTED_TEST_CLEANUP_REFS,
+                          retire_screenshot_test_orders)
 
 app = app_module.app
 
@@ -95,6 +97,7 @@ class DailyOrdersTest(unittest.TestCase):
         self.assertEqual(orders[0]["name"], "Ananya Sharma")
         self.assertEqual(orders[0]["phone"], "9876543210")
         self.assertEqual(orders[0]["payment_status"], "unpaid")
+        self.assertEqual(orders[0]["order_type"], "actual")
         self.assertEqual(orders[0]["building_flat"], "Tower B / 1204")
         thanks = self.client.get(response.headers["Location"])
         self.assertIn(b"Order confirmed", thanks.data)
@@ -133,6 +136,16 @@ class DailyOrdersTest(unittest.TestCase):
         with app_module.get_db() as con:
             self.assertEqual(con.execute("SELECT COUNT(*) FROM daily_orders").fetchone()[0], 1000)
         csrf = self.staff_login()
+        # Real orders cannot be deleted until staff explicitly mark them Test.
+        blocked_delete = self.client.post("/staff/daily/order/TEST-0/delete",
+            data={"csrf_token": csrf, "confirm_ref": "TEST-0", "date": self.service_date})
+        self.assertEqual(blocked_delete.status_code, 302)
+        with app_module.get_db() as con:
+            self.assertIsNone(con.execute(
+                "SELECT deleted_at FROM daily_orders WHERE order_ref='TEST-0'").fetchone()[0])
+        classified = self.client.post("/staff/daily/order/TEST-0/type",
+            data={"csrf_token": csrf, "order_type": "test", "date": self.service_date})
+        self.assertEqual(classified.status_code, 302)
         removed = self.client.post("/staff/daily/order/TEST-0/delete",
             data={"csrf_token": csrf, "confirm_ref": "TEST-0", "date": self.service_date})
         self.assertEqual(removed.status_code, 302)
@@ -141,10 +154,11 @@ class DailyOrdersTest(unittest.TestCase):
         self.assertIsNotNone(row["deleted_at"])
         self.assertIn(b"Number of portions", self.client.get("/").data)
 
-    def test_cannot_delete_paid_or_preparing_orders(self):
+    def test_cannot_delete_paid_test_or_actual_preparing_order(self):
         self.seed_orders(2)
         with app_module.get_db() as con:
-            con.execute("UPDATE daily_orders SET payment_status='paid' WHERE order_ref='TEST-0'")
+            con.execute("""UPDATE daily_orders SET order_type='test',
+                payment_status='paid', paid_at='2026-11-23T06:00:00' WHERE order_ref='TEST-0'""")
             con.execute("UPDATE daily_orders SET status='preparing' WHERE order_ref='TEST-1'")
         csrf = self.staff_login()
         for ref in ("TEST-0", "TEST-1"):
@@ -153,6 +167,93 @@ class DailyOrdersTest(unittest.TestCase):
             self.assertEqual(r.status_code, 302)
         with app_module.get_db() as con:
             self.assertEqual(con.execute("SELECT COUNT(*) FROM daily_orders WHERE deleted_at IS NOT NULL").fetchone()[0], 0)
+        # A classified Test may be removed even if preparation was started.
+        classified = self.client.post("/staff/daily/order/TEST-1/type",
+            data={"csrf_token": csrf, "order_type": "test", "date": self.service_date})
+        self.assertEqual(classified.status_code, 302)
+        removed = self.client.post("/staff/daily/order/TEST-1/delete",
+            data={"csrf_token": csrf, "confirm_ref": "TEST-1", "date": self.service_date})
+        self.assertEqual(removed.status_code, 302)
+        with app_module.get_db() as con:
+            row = con.execute("SELECT order_type,deleted_at FROM daily_orders WHERE order_ref='TEST-1'").fetchone()
+            self.assertEqual(row["order_type"], "test")
+            self.assertIsNotNone(row["deleted_at"])
+
+    def test_staff_can_mark_order_actual_or_test_and_delete_only_test(self):
+        self.open_menu()
+        self.seed_orders(1)
+        csrf = self.staff_login()
+        url = "/staff/daily/order/TEST-0"
+        initial = self.client.get("/staff?date=" + self.service_date)
+        self.assertIn(b'class="type-badge actual">ACTUAL</span>', initial.data)
+        self.assertNotIn(b"Delete test", initial.data)
+        # Invalid classification cannot mutate the record.
+        self.assertEqual(self.client.post(url + "/type",
+            data={"csrf_token": csrf, "order_type": "other"}).status_code, 400)
+        marked_test = self.client.post(url + "/type",
+            data={"csrf_token": csrf, "order_type": "test", "date": self.service_date})
+        self.assertEqual(marked_test.status_code, 302)
+        page = self.client.get("/staff?date=" + self.service_date)
+        self.assertIn(b'class="type-badge test">TEST</span>', page.data)
+        self.assertIn(b"Delete test", page.data)
+        back_to_actual = self.client.post(url + "/type",
+            data={"csrf_token": csrf, "order_type": "actual", "date": self.service_date})
+        self.assertEqual(back_to_actual.status_code, 302)
+        with app_module.get_db() as con:
+            row = con.execute("SELECT order_type,deleted_at FROM daily_orders WHERE order_ref='TEST-0'").fetchone()
+            self.assertEqual(row["order_type"], "actual")
+            self.assertIsNone(row["deleted_at"])
+        forbidden_delete = self.client.post(url + "/delete",
+            data={"csrf_token": csrf, "confirm_ref": "TEST-0", "date": self.service_date})
+        self.assertEqual(forbidden_delete.status_code, 302)
+        with app_module.get_db() as con:
+            self.assertIsNone(con.execute("SELECT deleted_at FROM daily_orders WHERE order_ref='TEST-0'").fetchone()[0])
+
+    def test_retires_only_four_screenshot_test_refs_and_protects_paid(self):
+        self.assertEqual(len(REQUESTED_TEST_CLEANUP_REFS), 4)
+        # Create rows resembling the production screenshot, with controlled values.
+        # One screenshot test ref has since been marked paid: it must survive.
+        refs = list(REQUESTED_TEST_CLEANUP_REFS)
+        preserved_paid = "PFD-261123-C78F63B732C5"
+        with app_module.get_db() as con:
+            for idx, ref in enumerate(refs + [preserved_paid, "UNRELATED-UNPAID-1"]):
+                state = "paid" if idx in (2, 4) else ("pending_verification" if idx == 1 else "unpaid")
+                paid_at = "2026-11-23T07:00:00" if idx in (2, 4) else None
+                con.execute("""INSERT INTO daily_orders
+                    (order_ref,nonce,created_at,service_date,juice,portions,unit_price,
+                     total_price,delivery_slot,building_flat,updated_at,name,phone,
+                     payment_status,paid_at)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    (ref, f"cleanup-nonce-{idx}", "2026-11-23T07:30:00",
+                     self.service_date, "Mosambi", 1, 99, 99, "morning",
+                     "Tower A / 101", "2026-11-23T07:30:00", "Screenshot Test", "9876543210",
+                     state, paid_at))
+            changed = retire_screenshot_test_orders(con, "2026-11-23T07:45:00")
+        self.assertEqual(changed, 3)
+        with app_module.get_db() as con:
+            for idx, ref in enumerate(refs):
+                row = con.execute(
+                    "SELECT deleted_at,order_type,payment_status FROM daily_orders WHERE order_ref=?",
+                    (ref,),
+                ).fetchone()
+                if idx == 2:
+                    self.assertIsNone(row["deleted_at"])
+                    self.assertEqual(row["payment_status"], "paid")
+                    self.assertEqual(row["order_type"], "actual")
+                else:
+                    self.assertIsNotNone(row["deleted_at"])
+                    self.assertEqual(row["order_type"], "test")
+            for ref in (preserved_paid, "UNRELATED-UNPAID-1"):
+                self.assertIsNone(con.execute(
+                    "SELECT deleted_at FROM daily_orders WHERE order_ref=?", (ref,)
+                ).fetchone()[0])
+            self.assertEqual(retire_screenshot_test_orders(con, "2026-11-23T07:46:00"), 0)
+        self.staff_login()
+        page = self.client.get("/staff?date=" + self.service_date)
+        for idx, ref in enumerate(refs):
+            if idx != 2:
+                self.assertNotIn(ref.encode(), page.data)
+        self.assertIn(preserved_paid.encode(), page.data)
 
     def test_archive_old_orders_preserves_paid_history_and_restore(self):
         self.seed_orders(2)
@@ -434,6 +535,8 @@ class DailyOrdersTest(unittest.TestCase):
         self.assertIn(b".order-table .big-slot", page.data)
         self.assertIn(b".order-table .big-portions", page.data)
         self.assertIn(b"Morning:", page.data)
+        self.assertIn(b"Save type", page.data)
+        self.assertIn(b"class=\"type-badge actual\">ACTUAL", page.data)
         csv = self.client.get("/staff/daily.csv?date=" + self.service_date)
         self.assertEqual(csv.status_code, 200)
         self.assertIn(b"TEST-0", csv.data)
@@ -452,6 +555,8 @@ class DailyOrdersTest(unittest.TestCase):
         self.assertEqual(bad.status_code, 403)
         bad_delete = self.client.post("/staff/daily/order/TEST-0/delete", data={"confirm_ref": "TEST-0"})
         self.assertEqual(bad_delete.status_code, 403)
+        bad_type = self.client.post("/staff/daily/order/TEST-0/type", data={"order_type": "test"})
+        self.assertEqual(bad_type.status_code, 403)
 
 
 if __name__ == "__main__":
