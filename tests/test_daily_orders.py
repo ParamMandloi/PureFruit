@@ -186,7 +186,7 @@ class DailyOrdersTest(unittest.TestCase):
         url = "/staff/daily/order/TEST-0"
         initial = self.client.get("/staff?date=" + self.service_date)
         self.assertIn(b'class="type-badge actual">ACTUAL</span>', initial.data)
-        self.assertNotIn(b"Delete test", initial.data)
+        self.assertNotIn(b'<button class="danger" type="submit">Delete test</button>', initial.data)
         # Invalid classification cannot mutate the record.
         self.assertEqual(self.client.post(url + "/type",
             data={"csrf_token": csrf, "order_type": "other"}).status_code, 400)
@@ -195,7 +195,7 @@ class DailyOrdersTest(unittest.TestCase):
         self.assertEqual(marked_test.status_code, 302)
         page = self.client.get("/staff?date=" + self.service_date)
         self.assertIn(b'class="type-badge test">TEST</span>', page.data)
-        self.assertIn(b"Delete test", page.data)
+        self.assertIn(b'<button class="danger" type="submit">Delete test</button>', page.data)
         back_to_actual = self.client.post(url + "/type",
             data={"csrf_token": csrf, "order_type": "actual", "date": self.service_date})
         self.assertEqual(back_to_actual.status_code, 302)
