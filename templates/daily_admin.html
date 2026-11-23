@@ -24,13 +24,37 @@ th{font-size:11px;letter-spacing:.04em;color:#777;text-transform:uppercase}
 .danger{background:#fff0ed;color:#a02c27}.flash{background:#edf6eb;padding:12px;border-radius:9px}
 .paid{color:#1a8141;font-weight:700}.unpaid{color:#98691a;font-weight:700}
 .tip{font-size:12px;color:#777;margin:8px 0}
-@media(max-width:700px){main{padding:12px}.box{padding:13px}.stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Staff delivery prep: slot and portion count are primary, glanceable values. */
+.order-table{min-width:0!important}
+.order-table .big-slot{display:block;font-size:25px;line-height:1.12;font-weight:850;white-space:nowrap;letter-spacing:-.6px;color:#202020}
+.order-table .flat-name{display:block;font-size:17px;font-weight:750;margin:7px 0 3px;overflow-wrap:anywhere}
+.order-table .big-portions{display:inline-block;font-size:38px;line-height:1;font-weight:850;letter-spacing:-1px;color:#202020;vertical-align:baseline}
+.order-table .portions-label{display:inline-block;margin-left:5px;font-size:11px;font-weight:750;color:#555;letter-spacing:.06em}
+.order-table .juice-name{display:block;font-size:17px;font-weight:700;margin:5px 0 4px}
+.order-table td small{display:block;font-size:11px;color:#777}
+.order-table .customer-cell strong{font-size:16px}
+@media(max-width:700px){
+main{padding:12px}.box{padding:13px}.stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.order-table,.order-table tbody{display:block;width:100%}
+.order-table thead{display:none}
+.order-table tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:9px;background:#fff;border:1px solid #deded9;border-radius:12px;margin-bottom:12px;padding:12px}
+.order-table td{display:block;min-width:0;border:0;padding:0;overflow-wrap:anywhere}
+.order-table .slot-cell{grid-column:1;grid-row:1}
+.order-table .portion-cell{grid-column:2;grid-row:1;text-align:right}
+.order-table .customer-cell{grid-column:1/-1;grid-row:2;background:#f6f6f3;border-radius:7px;padding:8px}
+.order-table td:nth-child(4){grid-column:1/-1;grid-row:3}
+.order-table td:nth-child(5){grid-column:1/-1;grid-row:4}
+.order-table td[colspan]{grid-column:1/-1}
+.order-table .big-slot{font-size:24px}
+.order-table .big-portions{font-size:42px}
+.order-table .flat-name{font-size:16px}
+.order-table .action-form{margin:6px 0}
+}
 </style></head><body><main>
 <header>
   <div><h1>PureFruit · Daily Orders</h1><small>Manage juice, customers, orders and deliveries</small></div>
   <div class="flex">
-    <a class="button secondary" href="{{ url_for('staff_dashboard') }}">Daily</a>
-    <a class="button secondary" href="/staff/subscriptions">Subscriptions</a>
+    <a class="button secondary" href="{{ url_for('daily_admin') }}">Daily orders</a>
     <a class="button secondary" href="{{ public_url }}" target="_blank" rel="noopener">Customer form</a>
     <a class="button secondary" href="{{ url_for('daily_export',date=selected) }}">Export CSV</a>
   </div>
@@ -91,14 +115,22 @@ th{font-size:11px;letter-spacing:.04em;color:#777;text-transform:uppercase}
     <div><label for="date">Filter delivery date</label><input type="date" name="date" id="date" value="{{ selected }}"></div><button class="secondary" type="submit">Show orders</button>
   </form>
   {% endif %}
-  <div class="table-wrap"><table><thead>
-    <tr><th>Slot / Flat</th><th>Customer</th><th>Juice / Portions</th><th>Payment</th><th>Status / Delete</th></tr>
+  <div class="table-wrap"><table class="order-table"><thead>
+    <tr><th>Delivery slot / Flat</th><th>Portions / Juice</th><th>Customer</th><th>Payment</th><th>Status / Delete</th></tr>
   </thead><tbody>
     {% for order in rows %}
     <tr>
-      <td><strong>{{ slots[order.delivery_slot] }}</strong><br>{{ order.building_flat }}<br><small>{{ order.order_ref }} · {{ order.service_date }}</small></td>
-      <td><strong>{{ order.name or 'Unrecorded' }}</strong><br>{{ order.phone or 'Legacy order' }}</td>
-      <td>{{ order.juice }} · {{ order.portions }} × ₹{{ order.unit_price }}<br><strong>₹{{ order.total_price }}</strong></td>
+      <td class="slot-cell">
+        <span class="big-slot">{{ slots[order.delivery_slot] }}</span>
+        <span class="flat-name">{{ order.building_flat }}</span>
+        <small>{{ order.order_ref }} · {{ order.service_date }}</small>
+      </td>
+      <td class="portion-cell">
+        <span class="big-portions">{{ order.portions }}</span><span class="portions-label">PORTIONS</span>
+        <span class="juice-name">{{ order.juice }} · 300 ml</span>
+        <small>₹{{ order.unit_price }} each · <strong>₹{{ order.total_price }}</strong> total</small>
+      </td>
+      <td class="customer-cell"><strong>{{ order.name }}</strong><br>{{ order.phone }}</td>
       <td>
       {% if order.payment_status=='paid' %}<span class="paid">Paid · {{ order.payment_method }}</span>
       {% elif order.payment_status=='pending_verification' %}<span class="unpaid">Customer reports paid — verify bank credit</span>

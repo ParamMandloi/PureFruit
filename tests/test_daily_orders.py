@@ -68,10 +68,11 @@ class DailyOrdersTest(unittest.TestCase):
             for i in range(quantity):
                 con.execute("""INSERT INTO daily_orders
                     (order_ref,nonce,created_at,service_date,juice,portions,unit_price,
-                     total_price,delivery_slot,building_flat,updated_at)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                     total_price,delivery_slot,building_flat,updated_at,name,phone)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     (f"TEST-{i}", f"nonce-{i}", "2026-11-22T09:00:00", self.service_date,
-                     "Pineapple", 1, 99, 99, "morning", "Tower A / 104", "2026-11-22T09:00:00"))
+                     "Pineapple", 1, 99, 99, "morning", "Tower A / 104", "2026-11-22T09:00:00",
+                     "Sample Daily Customer", "9876543210"))
 
     def test_closed_form_cannot_submit(self):
         fields = self.form_fields()
@@ -406,6 +407,42 @@ class DailyOrdersTest(unittest.TestCase):
         self.staff_login()
         self.assertIn(b"Daily Orders", self.client.get("/staff").data)
         self.assertEqual(self.client.get("/staff/subscriptions").status_code, 200)
+
+    def test_staff_dashboard_hides_legacy_and_highlights_slots_portions(self):
+        self.open_menu()
+        self.seed_orders(1)
+        with app_module.get_db() as con:
+            # Older daily orders predate the customer-name/mobile fields.
+            con.execute("""INSERT INTO daily_orders
+                (order_ref,nonce,created_at,service_date,juice,portions,unit_price,
+                 total_price,delivery_slot,building_flat,updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                ("LEGACY-OLD-1", "legacy-nonce-1", "2026-11-22T09:00:00",
+                 self.service_date, "Pineapple", 2, 99, 198,
+                 "afternoon", "Legacy tower / 100", "2026-11-22T09:00:00"))
+        self.staff_login()
+        page = self.client.get("/staff?date=" + self.service_date)
+        self.assertEqual(page.status_code, 200)
+        self.assertIn(b"Sample Daily Customer", page.data)
+        self.assertIn(b"TEST-0", page.data)
+        self.assertNotIn(b"LEGACY-OLD-1", page.data)
+        self.assertNotIn(b'Legacy order', page.data)
+        self.assertNotIn(b'href="/staff/subscriptions"', page.data)
+        self.assertIn(b'href="/staff"', page.data)
+        self.assertIn(b'class="big-slot">8', page.data)
+        self.assertIn(b'class="big-portions">1</span>', page.data)
+        self.assertIn(b".order-table .big-slot", page.data)
+        self.assertIn(b".order-table .big-portions", page.data)
+        self.assertIn(b"Morning:", page.data)
+        csv = self.client.get("/staff/daily.csv?date=" + self.service_date)
+        self.assertEqual(csv.status_code, 200)
+        self.assertIn(b"TEST-0", csv.data)
+        self.assertNotIn(b"LEGACY-OLD-1", csv.data)
+        # Old records are preserved in the database, not deleted.
+        with app_module.get_db() as con:
+            self.assertEqual(con.execute(
+                "SELECT COUNT(*) FROM daily_orders WHERE order_ref='LEGACY-OLD-1'"
+            ).fetchone()[0], 1)
 
     def test_staff_modifications_require_csrf(self):
         no_login = self.client.post("/staff/daily/menu", data={"juice": "ABC"})

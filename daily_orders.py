@@ -428,15 +428,18 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
             if view == "archived":
                 rows = [dict(r) for r in con.execute(
                     """SELECT * FROM daily_orders WHERE archived_at IS NOT NULL
-                       AND deleted_at IS NULL ORDER BY service_date DESC, id DESC LIMIT 300""")]
+                       AND deleted_at IS NULL
+                       AND TRIM(name)!='' AND TRIM(phone)!=''
+                       ORDER BY service_date DESC, id DESC LIMIT 300""")]
             else:
                 rows = [dict(r) for r in con.execute(
                     """SELECT * FROM daily_orders WHERE service_date=? AND deleted_at IS NULL
-                       AND archived_at IS NULL
+                       AND archived_at IS NULL AND TRIM(name)!='' AND TRIM(phone)!=''
                        ORDER BY CASE delivery_slot WHEN 'morning' THEN 0 ELSE 1 END,
                        building_flat COLLATE NOCASE, id""", (selected,))]
             archived_count = con.execute(
-                "SELECT COUNT(*) FROM daily_orders WHERE archived_at IS NOT NULL AND deleted_at IS NULL"
+                """SELECT COUNT(*) FROM daily_orders WHERE archived_at IS NOT NULL
+                   AND deleted_at IS NULL AND TRIM(name)!='' AND TRIM(phone)!=''"""
             ).fetchone()[0]
             customer_rows = [dict(r) for r in con.execute("""
                 SELECT c.name, c.phone,
@@ -613,6 +616,7 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
         with get_db() as con:
             rows = [dict(r) for r in con.execute(
                 """SELECT * FROM daily_orders WHERE service_date=? AND deleted_at IS NULL
+                   AND archived_at IS NULL AND TRIM(name)!='' AND TRIM(phone)!=''
                    ORDER BY delivery_slot,building_flat""", (selected,))]
         fields = [(k, label) for k, label in (
             ("order_ref", "Reference"), ("created_at", "Order time IST"),
