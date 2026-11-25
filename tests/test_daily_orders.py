@@ -78,13 +78,13 @@ class DailyOrdersTest(unittest.TestCase):
 
     def test_closed_form_cannot_submit(self):
         fields = self.form_fields()
-        response = self.client.post("/", data=fields)
+        response = self.client.post("/order", data=fields)
         self.assertEqual(response.status_code, 409)
 
     def test_order_saved_and_remembers_customer_without_whatsapp_chat(self):
         self.open_menu()
         fields = self.form_fields()
-        response = self.client.post("/", data=fields, follow_redirects=False)
+        response = self.client.post("/order", data=fields, follow_redirects=False)
         self.assertEqual(response.status_code, 303)
         self.assertIn("/daily/thanks/", response.headers["Location"])
         self.assertIn("purefruit_daily_device=", response.headers.get("Set-Cookie", ""))
@@ -103,7 +103,7 @@ class DailyOrdersTest(unittest.TestCase):
         self.assertIn(b"Order confirmed", thanks.data)
         self.assertIn(b"whether you pay now or later", thanks.data)
         # A repeated POST with the same nonce never creates a duplicate.
-        repeat = self.client.post("/", data=fields)
+        repeat = self.client.post("/order", data=fields)
         self.assertEqual(repeat.status_code, 303)
         with app_module.get_db() as con:
             self.assertEqual(con.execute("SELECT COUNT(*) FROM daily_orders").fetchone()[0], 1)
@@ -116,7 +116,7 @@ class DailyOrdersTest(unittest.TestCase):
     def test_customer_can_forget_cookie_without_erasing_orders(self):
         self.open_menu()
         fields = self.form_fields()
-        self.client.post("/", data=fields)
+        self.client.post("/order", data=fields)
         with self.client.session_transaction() as sess:
             token = sess["csrf_token"]
         r = self.client.post("/daily/forget", data={"csrf_token": token})
@@ -129,7 +129,7 @@ class DailyOrdersTest(unittest.TestCase):
         self.open_menu()
         fields = self.form_fields()
         self.seed_orders(MAX_DAILY_ORDERS)
-        blocked = self.client.post("/", data=fields)
+        blocked = self.client.post("/order", data=fields)
         self.assertEqual(blocked.status_code, 409)
         closed = self.client.get("/order")
         self.assertIn(b"Ordering is currently closed", closed.data)
@@ -285,7 +285,7 @@ class DailyOrdersTest(unittest.TestCase):
 
     def test_no_payment_app_buttons_and_manual_fallback(self):
         self.open_menu()
-        order = self.client.post("/", data=self.form_fields(), follow_redirects=False)
+        order = self.client.post("/order", data=self.form_fields(), follow_redirects=False)
         self.assertEqual(order.status_code, 303)
         self.assertEqual(app_module.UPI_PAYEE_ADDRESS, "9619140077-huf@ybl")
         self.assertEqual(app_module.UPI_PAYEE_NAME, "PARAMPRAKASH RAJENDRA MANDLOI KARTA")
@@ -327,7 +327,7 @@ class DailyOrdersTest(unittest.TestCase):
             with self.subTest(qty=qty):
                 fields = self.form_fields()
                 fields["portions"] = str(qty)
-                response = self.client.post("/", data=fields, follow_redirects=False)
+                response = self.client.post("/order", data=fields, follow_redirects=False)
                 self.assertEqual(response.status_code, 303)
                 ref = response.headers["Location"].rsplit("/", 1)[-1]
                 with app_module.get_db() as con:
@@ -367,11 +367,11 @@ class DailyOrdersTest(unittest.TestCase):
         for invalid in ("0", "11", "30", "100"):
             fields = self.form_fields()
             fields["portions"] = invalid
-            response = self.client.post("/", data=fields)
+            response = self.client.post("/order", data=fields)
             self.assertEqual(response.status_code, 400)
         fields = self.form_fields()
         fields["portions"] = "10"
-        response = self.client.post("/", data=fields, follow_redirects=False)
+        response = self.client.post("/order", data=fields, follow_redirects=False)
         self.assertEqual(response.status_code, 303)
         ref = response.headers["Location"].rsplit("/", 1)[-1]
         with app_module.get_db() as con:
@@ -388,7 +388,7 @@ class DailyOrdersTest(unittest.TestCase):
             )
         fields = self.form_fields()
         fields["portions"] = "4"
-        response = self.client.post("/", data=fields, follow_redirects=False)
+        response = self.client.post("/order", data=fields, follow_redirects=False)
         self.assertEqual(response.status_code, 303)
         ref = response.headers["Location"].rsplit("/", 1)[-1]
         with app_module.get_db() as con:
@@ -429,7 +429,7 @@ class DailyOrdersTest(unittest.TestCase):
 
     def test_payment_made_reports_only_and_does_not_hold_delivery(self):
         self.open_menu()
-        placed = self.client.post("/", data=self.form_fields(), follow_redirects=False)
+        placed = self.client.post("/order", data=self.form_fields(), follow_redirects=False)
         self.assertEqual(placed.status_code, 303)
         ref = placed.headers["Location"].rsplit("/", 1)[-1]
         with self.client.session_transaction() as sess:
@@ -468,7 +468,7 @@ class DailyOrdersTest(unittest.TestCase):
 
     def test_payment_report_requires_same_browser_and_csrf(self):
         self.open_menu()
-        placed = self.client.post("/", data=self.form_fields(), follow_redirects=False)
+        placed = self.client.post("/order", data=self.form_fields(), follow_redirects=False)
         ref = placed.headers["Location"].rsplit("/", 1)[-1]
         path = "/daily/thanks/" + ref + "/payment-made"
         without_csrf = self.client.post(path)
@@ -485,7 +485,7 @@ class DailyOrdersTest(unittest.TestCase):
         fields = self.form_fields()
         fields["customer_name"] = ""
         fields["customer_mobile"] = "123"
-        response = self.client.post("/", data=fields)
+        response = self.client.post("/order", data=fields)
         self.assertEqual(response.status_code, 400)
 
     def test_slot_cutoffs_are_exact_in_india_time(self):
