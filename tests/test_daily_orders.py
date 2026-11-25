@@ -617,6 +617,7 @@ class DailyOrdersTest(unittest.TestCase):
         self.assertEqual(other_browser.get("/staff/customers").status_code, 302)
 
     def test_consistent_bottle_brand_on_entry_website_and_daily_order(self):
+        self.open_menu()
         landing = self.client.get("/")
         website = self.client.get("/website")
         order = self.client.get("/order")
