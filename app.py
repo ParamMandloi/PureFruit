@@ -413,7 +413,8 @@ def index():
     return render_template(
         "index.html", csrf=csrf_token(), min_start=next_available_day().isoformat(),
         razorpay_ready=PAYMENTS_READY, razorpay_key_id=RAZORPAY_KEY_ID, payment_mode=PAYMENT_MODE,
-        checkout=checkout_config(),
+        checkout=checkout_config(), upi_payee_name=UPI_PAYEE_NAME,
+        pay_mobile_number="9619140077",
     )
 
 
@@ -559,7 +560,7 @@ def create_upi_order():
         link_customer_order(con, order_ref, token)
     send_order_alert("new", validated)
     response = jsonify(reference=order_ref, amount=validated["price"],
-                      payee="GREENRISE BUZZ PRIVATE LIMITED", status="payment_pending",
+                      payee=UPI_PAYEE_NAME, status="payment_pending",
                       my_orders=url_for("my_orders"))
     return set_customer_cookie(response, token), 201
 
