@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>PureFruit Customer History</title>
+<style>
+*{box-sizing:border-box}body{background:#f8f8f6;color:#252525;font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0}
+main{max-width:1000px;margin:0 auto;padding:20px}
+header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+h1{font:700 30px Georgia,serif;margin:0}.muted{color:#747474;font-size:12px}
+a{color:#242424}a.button,button{border:0;border-radius:9px;background:#292929;color:#fff;padding:11px 15px;text-decoration:none;cursor:pointer;font:inherit;font-weight:650}
+.card{border-radius:14px;padding:18px;background:#fff;border:1px solid #e2e2df;margin-top:17px}
+form{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+input{min-height:42px;border:1px solid #d4d4d0;border-radius:8px;padding:9px 12px;flex:1;min-width:180px;font:inherit}
+table{width:100%;border-collapse:collapse}th{text-align:left;font-size:11px;color:#777;text-transform:uppercase;letter-spacing:.03em}
+td,th{border-bottom:1px solid #ecece9;padding:11px 8px;text-align:left}
+.customer strong{font-size:16px}td.number{font-variant-numeric:tabular-nums;font-weight:650}
+.wrap{overflow-x:auto}table{min-width:670px}
+@media(max-width:620px){main{padding:12px}h1{font-size:25px}.card{padding:12px}td,th{padding:9px 6px}}
+</style></head>
+<body><main>
+<header>
+  <div><h1>Customer History</h1><div class="muted">PureFruit · Daily order customers</div></div>
+  <a class="button" href="{{ url_for('daily_admin') }}">Back to orders</a>
+</header>
+<section class="card">
+  <form method="get" action="{{ url_for('daily_customers_page') }}">
+    <input name="q" value="{{ q }}" placeholder="Search name or mobile" aria-label="Search customer" maxlength="60">
+    <button type="submit">Search</button>
+    {% if q %}<a href="{{ url_for('daily_customers_page') }}">Clear</a>{% endif %}
+  </form>
+  <p class="muted">Customer-wise totals for Actual, non-deleted, non-cancelled daily orders. Mobile numbers are customer-entered, not OTP-verified.</p>
+  <div class="wrap"><table>
+    <thead><tr><th>Customer</th><th>Mobile</th><th>Orders</th><th>Portions</th><th>Order value</th><th>Last delivery</th></tr></thead>
+    <tbody>{% for c in customers %}
+      <tr><td class="customer"><strong>{{ c.name }}</strong></td><td>{{ c.phone }}</td>
+        <td class="number">{{ c.orders }}</td><td class="number">{{ c.portions }}</td>
+        <td class="number">₹{{ c.total_value }}</td><td>{{ c.last_date or '—' }}</td></tr>
+    {% else %}<tr><td colspan="6">No customers found.</td></tr>{% endfor %}</tbody>
+  </table></div>
+  <p class="muted">Showing up to 200 matching customers. Narrow your search to find a specific customer.</p>
+</section></main></body></html>

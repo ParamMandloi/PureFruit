@@ -260,7 +260,7 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
         return response
 
     @app.route("/daily", methods=["GET", "POST"])
-    @app.route("/", methods=["GET", "POST"])
+    @app.route("/order", methods=["GET", "POST"])
     def daily_order_page():
         if request.method == "GET":
             return render_form()
@@ -442,6 +442,20 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
         response.headers["Cache-Control"] = "private, no-store"
         return response
 
+    def order_state(order):
+        """Staff-facing state, not an assertion of bank credit."""
+        if order["status"] == "delivered":
+            return "delivered"
+        if order["status"] == "cancelled":
+            return "cancelled"
+        if order["payment_status"] == "paid":
+            return "paid"
+        if order["payment_status"] == "pending_verification":
+            return "reported"
+        if order["status"] == "preparing":
+            return "preparing"
+        return "new"
+
     @app.get("/staff/daily")
     @app.get("/staff")
     @staff_only
@@ -453,18 +467,31 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
             selected = date.fromisoformat(selected).isoformat()
         except ValueError:
             selected = default_day.isoformat()
+
         view = request.args.get("view", "active")
         if view not in ("active", "archived"):
             view = "active"
+        slot_filter = request.args.get("slot", "all")
+        if slot_filter not in ("all", "morning", "afternoon"):
+            slot_filter = "all"
+        state_filter = request.args.get("state", "all")
+        if state_filter not in ("all", "new", "reported", "paid", "preparing", "delivered", "cancelled", "test"):
+            state_filter = "all"
+        try:
+            page_number = max(1, int(request.args.get("page", "1")))
+        except ValueError:
+            page_number = 1
+        per_page = 20
+
         with get_db() as con:
             if view == "archived":
-                rows = [dict(r) for r in con.execute(
+                source_rows = [dict(r) for r in con.execute(
                     """SELECT * FROM daily_orders WHERE archived_at IS NOT NULL
                        AND deleted_at IS NULL
                        AND TRIM(name)!='' AND TRIM(phone)!=''
-                       ORDER BY service_date DESC, id DESC LIMIT 300""")]
+                       ORDER BY service_date DESC, id DESC LIMIT 1000""")]
             else:
-                rows = [dict(r) for r in con.execute(
+                source_rows = [dict(r) for r in con.execute(
                     """SELECT * FROM daily_orders WHERE service_date=? AND deleted_at IS NULL
                        AND archived_at IS NULL AND TRIM(name)!='' AND TRIM(phone)!=''
                        ORDER BY CASE delivery_slot WHEN 'morning' THEN 0 ELSE 1 END,
@@ -473,20 +500,16 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
                 """SELECT COUNT(*) FROM daily_orders WHERE archived_at IS NOT NULL
                    AND deleted_at IS NULL AND TRIM(name)!='' AND TRIM(phone)!=''"""
             ).fetchone()[0]
-            customer_rows = [dict(r) for r in con.execute("""
-                SELECT c.name, c.phone,
-                    COUNT(o.id) AS orders, COALESCE(SUM(o.portions),0) AS portions,
-                    COALESCE(SUM(o.total_price),0) AS total_value,
-                    MAX(o.service_date) AS last_date
-                FROM daily_customers c LEFT JOIN daily_orders o
-                    ON o.customer_id=c.id AND o.deleted_at IS NULL
-                      AND o.status!='cancelled'
-                GROUP BY c.id ORDER BY last_date DESC, orders DESC LIMIT 100
-            """)]
             upcoming = [dict(r) for r in con.execute(
                 "SELECT * FROM daily_menus WHERE service_date>=? ORDER BY service_date LIMIT 8",
                 (today.isoformat(),))]
-        valid = [r for r in rows if r["status"] != "cancelled"]
+
+        valid = [r for r in source_rows if r["status"] != "cancelled" and r["order_type"] != "test"]
+        status_counts = {key: 0 for key in ("new", "reported", "paid", "preparing", "delivered")}
+        for row in valid:
+            state = order_state(row)
+            if state in status_counts:
+                status_counts[state] += 1
         stats = {
             "orders": len(valid),
             "remaining": max(0, MAX_DAILY_ORDERS-len(valid)),
@@ -497,6 +520,29 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
             "morning": sum(r["portions"] for r in valid if r["delivery_slot"] == "morning"),
             "afternoon": sum(r["portions"] for r in valid if r["delivery_slot"] == "afternoon"),
         }
+        for row in source_rows:
+            row["display_state"] = order_state(row)
+        filtered = [
+            row for row in source_rows
+            if (slot_filter == "all" or row["delivery_slot"] == slot_filter)
+            and (state_filter == "all"
+                 or (state_filter == "test" and row["order_type"] == "test")
+                 or (state_filter != "test" and row["order_type"] != "test"
+                     and row["display_state"] == state_filter))
+        ]
+        if view == "active":
+            priority = {"new": 0, "reported": 1, "preparing": 2, "paid": 3,
+                        "delivered": 4, "cancelled": 5}
+            filtered.sort(key=lambda row: (
+                priority.get(row["display_state"], 6),
+                0 if row["delivery_slot"] == "morning" else 1,
+                row["id"],
+            ))
+        total_filtered = len(filtered)
+        total_pages = max(1, (total_filtered + per_page - 1) // per_page)
+        page_number = min(page_number, total_pages)
+        rows = filtered[(page_number-1)*per_page:page_number*per_page]
+
         editor_day = request.args.get("edit_date", selected)
         try:
             editor_day = date.fromisoformat(editor_day).isoformat()
@@ -508,11 +554,35 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
         }
         return render_template(
             "daily_admin.html", csrf=csrf_token(), menu=menu, juices=JUICES,
-            slots=SLOTS, statuses=STATUSES, rows=rows, customers=customer_rows,
+            slots=SLOTS, statuses=STATUSES, rows=rows,
             stats=stats, selected=selected, today=today.isoformat(), upcoming=upcoming,
-            view=view, archived_count=archived_count,
+            view=view, archived_count=archived_count, status_counts=status_counts,
+            slot_filter=slot_filter, state_filter=state_filter,
+            page_number=page_number, total_pages=total_pages,
+            total_filtered=total_filtered, per_page=per_page,
             limit=MAX_DAILY_ORDERS, public_url=url_for("daily_order_page", _external=True)
         )
+
+    @app.get("/staff/customers")
+    @staff_only
+    def daily_customers_page():
+        """Customer history stays available to staff but off the dispatch screen."""
+        q = " ".join(request.args.get("q", "").split())[:60]
+        pattern = "%" + q + "%"
+        with get_db() as con:
+            customers = [dict(r) for r in con.execute("""
+                SELECT c.id, c.name, c.phone, c.created_at, c.last_seen_at,
+                    COUNT(o.id) AS orders, COALESCE(SUM(o.portions),0) AS portions,
+                    COALESCE(SUM(o.total_price),0) AS total_value,
+                    MAX(o.service_date) AS last_date
+                FROM daily_customers c LEFT JOIN daily_orders o
+                  ON o.customer_id=c.id AND o.deleted_at IS NULL
+                   AND o.status!='cancelled' AND o.order_type='actual'
+                WHERE c.name LIKE ? OR c.phone LIKE ?
+                GROUP BY c.id ORDER BY last_date DESC, orders DESC, c.id DESC
+                LIMIT 200
+            """, (pattern, pattern))]
+        return render_template("daily_customers.html", customers=customers, q=q)
 
     @app.post("/staff/daily/menu")
     @staff_only

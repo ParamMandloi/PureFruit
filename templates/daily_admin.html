@@ -1,132 +1,163 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex,nofollow"><title>PureFruit Daily Orders</title>
+<meta name="robots" content="noindex,nofollow"><title>PureFruit | Dispatch Dashboard</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#f8f8f5;color:#292929;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-main{max-width:1100px;margin:0 auto;padding:20px}
-header{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
-h1{font:700 31px Georgia,serif;margin:0}h2{font-size:19px;margin:0 0 12px}h3{font-size:15px}
-a{color:inherit}.muted,small{color:#777}
-.box{background:#fff;border:1px solid #e2e2dd;border-radius:13px;padding:19px;margin:15px 0}
-.stat-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
-.stat{background:#f2f2f0;padding:13px;border-radius:9px}.stat strong{display:block;font-size:24px}
-.flex{display:flex;gap:11px;flex-wrap:wrap;align-items:flex-end}
-label{display:block;font-size:12px;font-weight:700;margin:0 0 6px}
-input,select{font:inherit;border:1px solid #d7d7d2;border-radius:7px;min-height:38px;padding:6px;max-width:100%}
-button,.button{display:inline-block;cursor:pointer;border:0;border-radius:8px;padding:10px 13px;background:#2c2c2c;color:#fff;font:inherit;text-decoration:none}
-.secondary{background:#e6e6e2;color:#333}
-table{width:100%;border-collapse:collapse}th,td{text-align:left;vertical-align:top;padding:11px 6px;border-bottom:1px solid #ececea}
-th{font-size:11px;letter-spacing:.04em;color:#777;text-transform:uppercase}
-.table-wrap{overflow-x:auto}.table-wrap table{min-width:760px}
-.action-form{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:4px 0}
-.action-form select{max-width:120px}.action-form button{padding:7px 10px}
-.danger{background:#fff0ed;color:#a02c27}.flash{background:#edf6eb;padding:12px;border-radius:9px}
-.paid{color:#1a8141;font-weight:700}.unpaid{color:#98691a;font-weight:700}
-.tip{font-size:12px;color:#777;margin:8px 0}
-.type-badge{display:inline-block;padding:3px 9px;border-radius:7px;font-size:12px;font-weight:800;letter-spacing:.02em;margin:5px 0 3px}
-.type-badge.actual{color:#4d555b;background:#ecefed}
-.type-badge.test{color:#8e4915;background:#fff0d8}
-.type-form{border-top:1px dashed #e8e8e3;margin-top:9px;padding-top:8px}
-.type-form label{color:#555}
-.order-table tr.test-order{background:#fffaf3}
-.danger{border:1px solid #dfb7a9;font-weight:750}
-/* Staff delivery prep: slot and portion count are primary, glanceable values. */
-.order-table{min-width:0!important}
-.order-table .big-slot{display:block;font-size:25px;line-height:1.12;font-weight:850;white-space:nowrap;letter-spacing:-.6px;color:#202020}
-.order-table .flat-name{display:block;font-size:17px;font-weight:750;margin:7px 0 3px;overflow-wrap:anywhere}
-.order-table .big-portions{display:inline-block;font-size:38px;line-height:1;font-weight:850;letter-spacing:-1px;color:#202020;vertical-align:baseline}
-.order-table .portions-label{display:inline-block;margin-left:5px;font-size:11px;font-weight:750;color:#555;letter-spacing:.06em}
-.order-table .juice-name{display:block;font-size:17px;font-weight:700;margin:5px 0 4px}
-.order-table td small{display:block;font-size:11px;color:#777}
-.order-table .customer-cell strong{font-size:16px}
-@media(max-width:700px){
-main{padding:12px}.box{padding:13px}.stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-.order-table,.order-table tbody{display:block;width:100%}
+body{margin:0;background:#f8f8f6;color:#292929;font:13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:1240px;margin:0 auto;padding:13px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+h1{font:700 27px Georgia,serif;margin:0}
+h2{font-size:17px;margin:0}h3{font-size:15px}
+a{color:inherit}
+.muted,small{color:#737373}
+.box{background:white;border:1px solid #e3e3df;border-radius:13px;padding:14px;margin:10px 0}
+.nav{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.nav a,.button,button{display:inline-block;border:0;border-radius:7px;padding:8px 11px;background:#2c2c2c;color:white;font:inherit;font-weight:650;cursor:pointer;text-decoration:none}
+.nav a{background:#eaeae7;color:#343434}
+.nav a.active{background:#292929;color:white}
+button.secondary,.button.secondary{background:#e7e7e4;color:#343434}
+button.danger{background:#fff0eb;color:#9a271d;border:1px solid #e9bcb3}
+.flash{background:#f2f3ef;border:1px solid #d9dfd4;border-radius:8px;padding:10px;margin-bottom:10px}
+.status-legend{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:8px 0 11px}
+.stat{font-weight:750;font-size:13px;padding:7px 11px;border:1px solid #ddd;border-radius:9px;background:#f7f7f5}
+.status-chip{display:inline-flex;align-items:center;gap:5px;border-radius:6px;font-size:11px;letter-spacing:.01em;font-weight:750;padding:4px 8px;white-space:nowrap}
+.chip-new{background:#fff0d7;color:#8c5704}.chip-reported{background:#fff0dc;color:#9c5812}
+.chip-paid{background:#e4f5e7;color:#176735}.chip-delivered{background:#e4ebf4;color:#365777}
+.chip-preparing{background:#ebe6fb;color:#614b98}.chip-cancelled{background:#eeeeec;color:#666}
+.status-count{color:#666;font-size:11px}
+.summary{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.summary .big{font-size:18px;font-weight:800;color:#222}.summary .metric{padding:6px 10px;border:1px solid #e8e8e4;background:#fafaf8;border-radius:8px}
+.summary .metric small{display:block;font-size:10px}
+.filters{display:flex;align-items:end;gap:8px;flex-wrap:wrap;margin:12px 0 6px}
+label{display:block;font-size:11px;font-weight:700;color:#575757;margin-bottom:3px}
+input,select{font:inherit;border:1px solid #d5d5d1;border-radius:7px;padding:6px 7px;min-height:33px;max-width:100%;background:#fff}
+.filters input,.filters select{min-height:36px}
+.order-table{width:100%;border-collapse:separate;border-spacing:0 6px;table-layout:fixed}
+.order-table th{text-align:left;text-transform:uppercase;letter-spacing:.03em;color:#888;font-size:10px;padding:4px 10px}
+.order-table td{background:#fff;border-top:1px solid #e8e8e5;border-bottom:1px solid #e8e8e5;padding:8px 10px;vertical-align:top}
+.order-table td:first-child{border-left:6px solid #d7d7d5;border-radius:8px 0 0 8px}
+.order-table td:last-child{border-right:1px solid #e8e8e5;border-radius:0 8px 8px 0}
+.order-table .state-new td:first-child{border-left-color:#e9a52b}
+.order-table .state-reported td:first-child{border-left-color:#e6a65b}
+.order-table .state-paid td:first-child{border-left-color:#43a865}
+.order-table .state-delivered td:first-child{border-left-color:#7894b9}
+.order-table .state-preparing td:first-child{border-left-color:#9a8acb}
+.order-table .state-cancelled td:first-child{border-left-color:#b8b8b8}
+.order-table .state-delivered td{background:#f6f8fa}
+.order-table .test-order td{background:#fffaf1}
+.order-table .big-slot{display:block;font-size:23px;line-height:1.12;font-weight:850;white-space:nowrap}
+.order-table .flat-name{display:block;font-size:15px;font-weight:750;margin:5px 0 1px}
+.order-table .big-portions{display:inline-block;font-size:33px;line-height:1;font-weight:850;vertical-align:baseline}
+.order-table .portions-label{font-size:10px;letter-spacing:.03em;color:#555;font-weight:700;margin-left:5px}
+.order-table .juice-name{display:block;font-size:14px;font-weight:700;margin:3px 0}
+.order-table td small{display:block;font-size:10px;line-height:1.3}
+.order-table .customer-cell strong{font-size:14px}
+.order-table .action-form{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:5px}
+.order-table button{padding:6px 9px;min-height:33px}
+.order-table select{min-height:33px}
+.order-table .type-badge{display:inline-block;font-size:10px;letter-spacing:.04em;font-weight:800;padding:3px 7px;border-radius:5px;margin-top:6px}
+.type-badge.actual{background:#f0f1ef;color:#555}.type-badge.test{background:#fff1d7;color:#97551b}
+details summary{cursor:pointer;color:#444;font-weight:650;min-height:20px}
+.more{border-top:1px dashed #e7e7e3;margin-top:7px;padding-top:6px}
+.more[open]{padding-bottom:3px}
+.payment-detail{margin-top:5px}
+.verify-check{display:flex;align-items:center;gap:4px;font-size:11px}
+.verify-check input{min-height:0}
+.pagination{display:flex;justify-content:center;align-items:center;gap:12px;margin:12px 0}
+.pagination a{background:#ececea;padding:8px 13px;border-radius:7px;text-decoration:none;font-weight:700}
+.menu-box summary{font-size:15px;font-weight:750}
+.menu-box[open] summary{margin-bottom:13px}
+.flex{display:flex;gap:9px;align-items:end;flex-wrap:wrap}
+.menu-box table{border-collapse:collapse;width:100%;margin-top:8px}
+.menu-box td,.menu-box th{text-align:left;border-bottom:1px solid #eee;padding:6px}
+.menu-box p,.hint{font-size:11px;color:#777;margin:7px 0}
+@media(max-width:900px){.order-table{table-layout:auto;min-width:790px}.scroll-table{overflow-x:auto}}
+@media(max-width:640px){
+main{padding:9px}h1{font-size:24px}header{margin-bottom:9px}
+.box{padding:10px}.summary .metric{padding:5px 8px}
+.order-table,.order-table tbody{display:block;min-width:0}
 .order-table thead{display:none}
-.order-table tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:9px;background:#fff;border:1px solid #deded9;border-radius:12px;margin-bottom:12px;padding:12px}
-.order-table td{display:block;min-width:0;border:0;padding:0;overflow-wrap:anywhere}
-.order-table .slot-cell{grid-column:1;grid-row:1}
-.order-table .portion-cell{grid-column:2;grid-row:1;text-align:right}
-.order-table .customer-cell{grid-column:1/-1;grid-row:2;background:#f6f6f3;border-radius:7px;padding:8px}
-.order-table td:nth-child(4){grid-column:1/-1;grid-row:3}
-.order-table td:nth-child(5){grid-column:1/-1;grid-row:4}
+.order-table tr{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);border:1px solid #e7e7e4;border-left:6px solid #d7d7d5;border-radius:11px;margin-bottom:8px;overflow:hidden}
+.order-table .state-new{border-left-color:#e9a52b}.order-table .state-reported{border-left-color:#e6a65b}
+.order-table .state-paid{border-left-color:#43a865}.order-table .state-delivered{border-left-color:#7894b9}
+.order-table .state-preparing{border-left-color:#9a8acb}
+.order-table td{display:block;min-width:0;padding:7px 8px;border:0;background:transparent!important}
+.order-table td:first-child{border:0;border-radius:0;grid-column:1;grid-row:1}
+.order-table td:nth-child(2){grid-column:2;grid-row:1;text-align:right}
+.order-table td:nth-child(3){grid-column:1;grid-row:2}
+.order-table td:nth-child(4){grid-column:2;grid-row:2;text-align:right}
+.order-table td:nth-child(5){grid-column:1/-1;grid-row:3;border-top:1px solid #eee}
 .order-table td[colspan]{grid-column:1/-1}
-.order-table .big-slot{font-size:24px}
-.order-table .big-portions{font-size:42px}
-.order-table .flat-name{font-size:16px}
-.order-table .action-form{margin:6px 0}
+.order-table .big-slot{font-size:23px}.order-table .big-portions{font-size:35px}
+.order-table .flat-name{font-size:14px}
+.order-table .customer-cell strong{font-size:13px}
+.order-table .action-form{justify-content:flex-end}
+.order-table td:last-child .action-form{justify-content:flex-start}
+.filters{gap:5px}.filters label{font-size:10px}.filters input,.filters select{max-width:135px}
+.pagination{gap:7px}
 }
-</style></head><body><main>
+</style></head>
+<body><main>
 <header>
-  <div><h1>PureFruit · Daily Orders</h1><small>Manage juice, customers, orders and deliveries</small></div>
-  <div class="flex">
-    <a class="button secondary" href="{{ url_for('daily_admin') }}">Daily orders</a>
-    <a class="button secondary" href="{{ public_url }}" target="_blank" rel="noopener">Customer form</a>
-    <a class="button secondary" href="{{ url_for('daily_export',date=selected) }}">Export CSV</a>
-  </div>
+  <div><h1>PureFruit · Dispatch</h1><div class="muted">Daily orders · quick fulfillment</div></div>
+  <nav class="nav" aria-label="Staff navigation">
+    <a class="active" href="{{ url_for('daily_admin') }}">Orders</a>
+    <a href="{{ url_for('daily_customers_page') }}">Customers</a>
+    <a href="{{ public_url }}" target="_blank" rel="noopener">Order form</a>
+    <a href="{{ url_for('homepage') }}" target="_blank" rel="noopener">Website</a>
+    <a href="{{ url_for('daily_export',date=selected) }}">CSV</a>
+  </nav>
 </header>
-{% with messages=get_flashed_messages(with_categories=true) %}{% for category,message in messages %}<div class="flash">{{ message }}</div>{% endfor %}{% endwith %}
-<section class="box">
-  <h2>Manage today's / tomorrow's juice</h2>
-  <p class="muted">Share the same link every day: <a href="{{ public_url }}">{{ public_url }}</a></p>
-  <form class="flex" method="post" action="{{ url_for('daily_update_menu') }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf }}">
-    <div><label for="service_date">Delivery date</label><input id="service_date" type="date" name="service_date" min="{{ today }}" value="{{ menu.service_date }}" required></div>
-    <div><label for="juice">Juice</label><select name="juice" id="juice">
-      {% for name in juices %}<option value="{{ name }}" {% if menu.juice==name %}selected{% endif %}>{{ name }}</option>{% endfor %}
-    </select></div>
-    <div><label for="price">₹ / 300 ml</label><input id="price" type="number" name="unit_price" value="{{ menu.unit_price }}" min="50" max="500" required style="width:95px"></div>
-    <div><label for="is_open">Accept orders</label><select name="is_open" id="is_open">
-      <option value="yes" {% if menu.is_open %}selected{% endif %}>Open</option>
-      <option value="no" {% if not menu.is_open %}selected{% endif %}>Closed</option>
-    </select></div>
-    <button type="submit">Save menu</button>
-  </form>
-  <p class="tip">To accept tomorrow's orders after 5 PM, configure tomorrow's fruit and set it to Open. Orders for today and tomorrow are counted separately, up to {{ limit }} each.</p>
-  {% if upcoming %}
-  <div class="table-wrap"><table>
-    <thead><tr><th>Date</th><th>Juice</th><th>Price</th><th>Accepting</th><th>Edit</th></tr></thead>
-    <tbody>{% for row in upcoming %}<tr>
-      <td>{{ row.service_date }}</td><td>{{ row.juice }}</td><td>₹{{ row.unit_price }}</td>
-      <td>{{ 'Open' if row.is_open else 'Closed' }}</td>
-      <td><a href="{{ url_for('daily_admin',edit_date=row.service_date,date=selected) }}">Edit menu</a></td>
-    </tr>{% endfor %}</tbody></table></div>
-  {% endif %}
-</section>
-<section class="box">
-  <h2>{{ 'Archived past orders' if view=='archived' else 'Orders · ' ~ selected }}</h2>
-  <div class="flex" style="margin-bottom:12px;align-items:center">
-    <a class="button secondary" href="{{ url_for('daily_admin',date=selected,view='active') }}">Active orders</a>
-    <a class="button secondary" href="{{ url_for('daily_admin',view='archived') }}">Archived orders ({{ archived_count }})</a>
-    {% if view!='archived' %}
-    <form method="post" action="{{ url_for('daily_archive_old') }}"
-      onsubmit="return confirm('Clear all past delivery dates from the active daily order list? Order history and payment records will be retained under Archived orders.');">
-      <input type="hidden" name="csrf_token" value="{{ csrf }}">
-      <input type="hidden" name="confirm_archive" value="yes">
-      <button class="danger" type="submit">Clear old orders</button>
-    </form>
-    {% endif %}
+{% with messages=get_flashed_messages(with_categories=true) %}
+{% for category,message in messages %}<div class="flash" role="status">{{ message }}</div>{% endfor %}
+{% endwith %}
+
+<section class="box" id="orders">
+  <div class="flex" style="justify-content:space-between;align-items:center">
+    <h2>{{ 'Archived daily orders' if view=='archived' else 'Orders · ' ~ selected }}</h2>
+    <nav class="nav" aria-label="Orders view">
+      <a href="{{ url_for('daily_admin',date=selected) }}" class="{{ 'active' if view!='archived' else '' }}">Active orders</a>
+      <a href="{{ url_for('daily_admin',view='archived') }}" class="{{ 'active' if view=='archived' else '' }}">Archive ({{ archived_count }})</a>
+    </nav>
   </div>
   {% if view!='archived' %}
-  <div class="stat-grid">
-    <div class="stat"><small>Active orders</small><strong>{{ stats.orders }} / {{ limit }}</strong></div>
-    <div class="stat"><small>Remaining</small><strong>{{ stats.remaining }}</strong></div>
-    <div class="stat"><small>Portions</small><strong>{{ stats.portions }}</strong></div>
-    <div class="stat"><small>Order value</small><strong>₹{{ stats.value }}</strong></div>
-    <div class="stat"><small>Unverified payments</small><strong>{{ stats.unpaid }}</strong></div>
+  <div class="summary" style="margin-top:9px">
+    <div class="metric"><small>Actual orders</small><span class="big">{{ stats.orders }}</span> / {{ limit }}</div>
+    <div class="metric"><small>Portions</small><span class="big">{{ stats.portions }}</span></div>
+    <div class="metric"><small>8–9 AM</small><span class="big">{{ stats.morning }}</span></div>
+    <div class="metric"><small>4–5 PM</small><span class="big">{{ stats.afternoon }}</span></div>
+    <div class="metric"><small>Unverified</small><span class="big">{{ stats.unpaid }}</span></div>
   </div>
-  <p class="muted">Morning: <strong>{{ stats.morning }} portions</strong> · Evening: <strong>{{ stats.afternoon }} portions</strong> · Customer reports payment: <strong>{{ stats.reported }}</strong></p>
-  <p class="tip">Every submitted order is confirmed for delivery whether paid or unpaid. Only the payment status needs bank verification.</p>
-  <form class="flex" method="get" action="{{ url_for('daily_admin') }}">
-    <div><label for="date">Filter delivery date</label><input type="date" name="date" id="date" value="{{ selected }}"></div><button class="secondary" type="submit">Show orders</button>
-  </form>
+  <div class="status-legend" aria-label="Status color key">
+    <span class="status-chip chip-new">New {{ status_counts.new }}</span>
+    <span class="status-chip chip-reported">Payment reported {{ status_counts.reported }}</span>
+    <span class="status-chip chip-paid">Paid {{ status_counts.paid }}</span>
+    <span class="status-chip chip-preparing">Preparing {{ status_counts.preparing }}</span>
+    <span class="status-chip chip-delivered">Delivered {{ status_counts.delivered }}</span>
+  </div>
   {% endif %}
-  <div class="table-wrap"><table class="order-table"><thead>
-    <tr><th>Delivery slot / Flat</th><th>Portions / Juice</th><th>Customer</th><th>Payment</th><th>Fulfillment / Actual or Test</th></tr>
-  </thead><tbody>
+  <form class="filters" method="get" action="{{ url_for('daily_admin') }}">
+    <input type="hidden" name="view" value="{{ view }}">
+    {% if view!='archived' %}<div><label for="date">Delivery date</label><input id="date" type="date" name="date" value="{{ selected }}"></div>{% endif %}
+    <div><label for="slot">Slot</label><select name="slot" id="slot">
+      <option value="all" {% if slot_filter=='all' %}selected{% endif %}>Both slots</option>
+      <option value="morning" {% if slot_filter=='morning' %}selected{% endif %}>8–9 AM</option>
+      <option value="afternoon" {% if slot_filter=='afternoon' %}selected{% endif %}>4–5 PM</option>
+    </select></div>
+    <div><label for="state">Show</label><select name="state" id="state">
+      {% for value,label in [('all','All orders'),('new','New'),('reported','Payment reported'),('paid','Paid'),('preparing','Preparing'),('delivered','Delivered'),('test','Test'),('cancelled','Cancelled')] %}
+      <option value="{{ value }}" {% if state_filter==value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select></div>
+    <button class="secondary" type="submit">Filter</button>
+  </form>
+  <div class="muted" style="margin:4px 0 6px">Showing {{ rows|length }} of {{ total_filtered }} matching orders · 20 per page</div>
+  <div class="scroll-table"><table class="order-table">
+    <colgroup><col style="width:23%"><col style="width:18%"><col style="width:16%"><col style="width:23%"><col style="width:20%"></colgroup>
+    <thead><tr><th>Slot / Flat</th><th>Portions</th><th>Customer</th><th>Payment</th><th>Fulfillment</th></tr></thead>
+    <tbody>
     {% for order in rows %}
-    <tr class="{{ 'test-order' if order.order_type=='test' else 'actual-order' }}">
+    <tr class="state-{{ order.display_state }} {{ 'test-order' if order.order_type=='test' else 'actual-order' }}">
       <td class="slot-cell">
         <span class="big-slot">{{ slots[order.delivery_slot] }}</span>
         <span class="flat-name">{{ order.building_flat }}</span>
@@ -135,68 +166,113 @@ main{padding:12px}.box{padding:13px}.stat-grid{grid-template-columns:repeat(2,mi
       <td class="portion-cell">
         <span class="big-portions">{{ order.portions }}</span><span class="portions-label">PORTIONS</span>
         <span class="juice-name">{{ order.juice }} · 300 ml</span>
-        <small>₹{{ order.unit_price }} each · <strong>₹{{ order.total_price }}</strong> total</small>
+        <small>₹{{ order.total_price }} total</small>
       </td>
-      <td class="customer-cell"><strong>{{ order.name }}</strong><br>{{ order.phone }}</td>
-      <td>
-      {% if order.payment_status=='paid' %}<span class="paid">Paid · {{ order.payment_method }}</span>
-      {% elif order.payment_status=='pending_verification' %}<span class="unpaid">Customer reports paid — verify bank credit</span>
-      {% else %}<span class="unpaid">Payment not reported</span>
-      {% endif %}
-      {% if order.payment_status!='paid' %}
-      <form class="action-form" method="post" action="{{ url_for('daily_mark_paid',order_ref=order.order_ref) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf }}"><input type="hidden" name="date" value="{{ selected }}">
-        <select name="payment_method" required><option value="upi">UPI</option><option value="cash">Cash</option></select>
-        <label style="font-size:11px;font-weight:400"><input type="checkbox" name="verified" value="yes" required> Received</label>
-        <button type="submit" class="secondary">Mark paid</button>
-      </form>
-      {% endif %}
+      <td class="customer-cell">
+        <strong>{{ order.name }}</strong><br>{{ order.phone }}
+        <br><span class="type-badge {{ order.order_type }}">{{ 'TEST' if order.order_type=='test' else 'ACTUAL' }}</span>
       </td>
-      <td>
+      <td class="payment-cell">
+        {% if order.payment_status=='paid' %}<span class="status-chip chip-paid">Paid · {{ order.payment_method }}</span>
+        {% elif order.payment_status=='pending_verification' %}<span class="status-chip chip-reported">Customer reports paid</span>
+        {% else %}<span class="status-chip chip-new">Unpaid</span>{% endif %}
+        {% if order.payment_status!='paid' and view!='archived' %}
+        <details class="payment-detail">
+          <summary>Verify bank credit</summary>
+          <form class="action-form" method="post" action="{{ url_for('daily_mark_paid',order_ref=order.order_ref) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf }}"><input type="hidden" name="date" value="{{ order.service_date }}">
+            <select name="payment_method" required aria-label="Payment method"><option value="upi">UPI</option><option value="cash">Cash</option></select>
+            <label class="verify-check"><input type="checkbox" name="verified" value="yes" required> Verified</label>
+            <button type="submit" class="secondary">Mark paid</button>
+          </form>
+        </details>
+        {% endif %}
+      </td>
+      <td class="status-cell">
+        <span class="status-chip chip-{{ order.display_state }}">{{ {'new':'New','reported':'Payment reported','paid':'Paid','preparing':'Preparing','delivered':'Delivered','cancelled':'Cancelled'}.get(order.display_state,'New') }}</span>
         {% if view=='archived' %}
-        <form class="action-form" method="post" action="{{ url_for('daily_restore_order',order_ref=order.order_ref) }}">
-          <input type="hidden" name="csrf_token" value="{{ csrf }}">
-          <input type="hidden" name="date" value="{{ order.service_date }}">
-          <button class="secondary" type="submit">Restore to active list</button>
-        </form>
+          <form class="action-form" method="post" action="{{ url_for('daily_restore_order',order_ref=order.order_ref) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf }}">
+            <input type="hidden" name="date" value="{{ order.service_date }}">
+            <button class="secondary" type="submit">Restore</button>
+          </form>
         {% else %}
-        <form class="action-form" method="post" action="{{ url_for('daily_update_status',order_ref=order.order_ref) }}">
-          <input type="hidden" name="csrf_token" value="{{ csrf }}"><input type="hidden" name="date" value="{{ selected }}">
-          <select name="status">{% for status in statuses %}<option value="{{ status }}" {% if order.status==status %}selected{% endif %}>{{ status|title }}</option>{% endfor %}</select>
-          <button type="submit" class="secondary">Save</button>
-        </form>
-        <div class="type-form">
-          <span class="type-badge {{ order.order_type }}">{{ 'TEST' if order.order_type=='test' else 'ACTUAL' }}</span>
-          <form class="action-form" method="post" action="{{ url_for('daily_update_order_type',order_ref=order.order_ref) }}">
+          <form class="action-form" method="post" action="{{ url_for('daily_update_status',order_ref=order.order_ref) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf }}"><input type="hidden" name="date" value="{{ order.service_date }}">
-            <select name="order_type" aria-label="Order type for {{ order.order_ref }}">
-              <option value="actual" {% if order.order_type=='actual' %}selected{% endif %}>Actual</option>
-              <option value="test" {% if order.order_type=='test' %}selected{% endif %}>Test</option>
+            <select name="status" aria-label="Fulfillment status">
+              {% for status in statuses %}<option value="{{ status }}" {% if order.status==status %}selected{% endif %}>{{ status|title }}</option>{% endfor %}
             </select>
-            <button class="secondary" type="submit">Save type</button>
+            <button type="submit" class="secondary">Save</button>
           </form>
-          {% if order.order_type=='test' and order.payment_status!='paid' and not order.paid_at %}
-          <form class="action-form" method="post" action="{{ url_for('daily_delete_order',order_ref=order.order_ref) }}"
-                onsubmit="return confirm('Delete this TEST order from the working list? Its record is retained for audit. Paid orders cannot be deleted.');">
-            <input type="hidden" name="csrf_token" value="{{ csrf }}"><input type="hidden" name="date" value="{{ order.service_date }}">
-            <input type="hidden" name="confirm_ref" value="{{ order.order_ref }}">
-            <button class="danger" type="submit">Delete test</button>
-          </form>
-          {% endif %}
-        </div>
+          <details class="more">
+            <summary>Actual / Test · Delete</summary>
+            <form class="action-form" method="post" action="{{ url_for('daily_update_order_type',order_ref=order.order_ref) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf }}"><input type="hidden" name="date" value="{{ order.service_date }}">
+              <select name="order_type" aria-label="Order type for {{ order.order_ref }}">
+                <option value="actual" {% if order.order_type=='actual' %}selected{% endif %}>Actual</option>
+                <option value="test" {% if order.order_type=='test' %}selected{% endif %}>Test</option>
+              </select>
+              <button class="secondary" type="submit">Save type</button>
+            </form>
+            {% if order.order_type=='test' and order.payment_status!='paid' and not order.paid_at %}
+            <form class="action-form" method="post" action="{{ url_for('daily_delete_order',order_ref=order.order_ref) }}" onsubmit="return confirm('Delete this TEST order from active dispatch? Audit record stays. Paid orders are protected.');">
+              <input type="hidden" name="csrf_token" value="{{ csrf }}"><input type="hidden" name="date" value="{{ order.service_date }}">
+              <input type="hidden" name="confirm_ref" value="{{ order.order_ref }}">
+              <button class="danger" type="submit">Delete test</button>
+            </form>
+            {% endif %}
+          </details>
         {% endif %}
       </td>
     </tr>
-    {% else %}<tr><td colspan="5">No {{ 'archived' if view=='archived' else 'active' }} orders here.</td></tr>{% endfor %}
-  </tbody></table></div>
-  <p class="tip">New orders are marked Actual. Staff can change an order to Test, then use Delete test. Only Test orders without verified payments can be deleted; paid orders are protected. Removed records remain in the database for audit.</p>
+    {% else %}<tr><td colspan="5" style="padding:20px;text-align:center">No orders match these filters.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+  {% if total_pages>1 %}
+  <nav class="pagination" aria-label="Order pages">
+    {% if page_number>1 %}
+    <a href="{{ url_for('daily_admin',date=selected,view=view,slot=slot_filter,state=state_filter,page=page_number-1) }}">Previous</a>
+    {% endif %}
+    <span>Page {{ page_number }} of {{ total_pages }}</span>
+    {% if page_number<total_pages %}
+    <a href="{{ url_for('daily_admin',date=selected,view=view,slot=slot_filter,state=state_filter,page=page_number+1) }}">Next</a>
+    {% endif %}
+  </nav>
+  {% endif %}
+  <p class="hint">Payment reported is not bank-verified. A delivery is confirmed even when unpaid. Paid orders are protected from test deletion.</p>
 </section>
-<section class="box">
-  <h2>Customer-wise summary</h2>
-  <p class="tip">Customers are grouped by entered mobile number (not OTP-verified). Repeat visits on the same browser automatically prefill saved name and mobile.</p>
-  <div class="table-wrap"><table><thead><tr><th>Customer</th><th>Mobile</th><th>Orders</th><th>Portions</th><th>Order value</th><th>Latest date</th></tr></thead>
-  <tbody>{% for c in customers %}
-    <tr><td>{{ c.name }}</td><td>{{ c.phone }}</td><td>{{ c.orders }}</td><td>{{ c.portions }}</td><td>₹{{ c.total_value }}</td><td>{{ c.last_date or '—' }}</td></tr>
-  {% else %}<tr><td colspan="6">No customer profiles yet.</td></tr>{% endfor %}</tbody></table></div>
-</section>
+<details class="box menu-box" id="menu-settings" {% if request.args.get('edit_date') %}open{% endif %}>
+  <summary>Menu settings · choose the next fruit / open or close orders</summary>
+  <form class="flex" method="post" action="{{ url_for('daily_update_menu') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <div><label for="service_date">Delivery date</label><input id="service_date" type="date" name="service_date" min="{{ today }}" value="{{ menu.service_date }}" required></div>
+    <div><label for="juice">Juice</label><select name="juice" id="juice">
+      {% for name in juices %}<option value="{{ name }}" {% if menu.juice==name %}selected{% endif %}>{{ name }}</option>{% endfor %}
+    </select></div>
+    <div><label for="price">₹ / 300 ml</label><input id="price" type="number" name="unit_price" value="{{ menu.unit_price }}" min="50" max="500" required style="width:90px"></div>
+    <div><label for="is_open">Accept orders</label><select name="is_open" id="is_open">
+      <option value="yes" {% if menu.is_open %}selected{% endif %}>Open</option>
+      <option value="no" {% if not menu.is_open %}selected{% endif %}>Closed</option>
+    </select></div>
+    <button type="submit">Save menu</button>
+  </form>
+  <p>After 5 PM, open the next service day's menu if you want customers to order for tomorrow.</p>
+  {% if upcoming %}<table>
+    <thead><tr><th>Date</th><th>Juice</th><th>Price</th><th>Accepting</th><th>Action</th></tr></thead>
+    <tbody>{% for row in upcoming %}<tr>
+      <td>{{ row.service_date }}</td><td>{{ row.juice }}</td><td>₹{{ row.unit_price }}</td>
+      <td>{{ 'Open' if row.is_open else 'Closed' }}</td>
+      <td><a href="{{ url_for('daily_admin',edit_date=row.service_date,date=selected) }}#menu-settings">Edit</a></td>
+    </tr>{% endfor %}</tbody>
+  </table>{% endif %}
+</details>
+{% if view!='archived' %}
+<div class="flex" style="margin:10px 0">
+  <form method="post" action="{{ url_for('daily_archive_old') }}" onsubmit="return confirm('Archive old delivery dates? Paid and customer history will be retained.');">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}"><input type="hidden" name="confirm_archive" value="yes">
+    <button class="secondary" type="submit">Archive past orders</button>
+  </form>
+  <a class="button secondary" href="{{ url_for('daily_customers_page') }}">Customer history</a>
+</div>
+{% endif %}
 </main></body></html>

@@ -389,7 +389,16 @@ def security_headers(response):
     return response
 
 
+@app.get("/")
+def homepage():
+    """Public PureFruit entry page: brand website or quick daily ordering."""
+    response = app.make_response(render_template("landing.html"))
+    response.headers["Cache-Control"] = "public, max-age=120"
+    return response
+
+
 @app.get("/subscriptions")
+@app.get("/website")
 def index():
     return render_template(
         "index.html", csrf=csrf_token(), min_start=next_available_day().isoformat(),
@@ -710,7 +719,7 @@ def staff_confirm_upi(order_ref):
                        confirmed_utr, timestamp, order_ref, confirmed_utr))
             if cur.rowcount != 1:
                 flash("The order changed; refresh and check before confirming.", "error")
-                return redirect(url_for("staff_dashboard"))
+                return redirect(url_for("daily_admin"))
     except sqlite3.IntegrityError:
         flash("That PhonePe UTR was already used for another order. Do not confirm twice.", "error")
         return redirect(url_for("staff_dashboard"))

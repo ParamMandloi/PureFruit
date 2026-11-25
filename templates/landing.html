@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f8f8f6">
+<meta name="description" content="Explore PureFruit or order today's freshly cold-pressed juice in two taps.">
+<title>PureFruit | Fresh juice, your way</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100svh;background:#f8f8f6;color:#252525;font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.shell{width:min(860px,calc(100% - 32px));margin:0 auto;min-height:100svh;display:flex;flex-direction:column}
+header{padding:24px 0 8px;display:flex;justify-content:space-between;align-items:center;gap:14px}
+.brand{font:700 33px Georgia,serif;letter-spacing:-1px}
+.tag{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#777;font-weight:700}
+main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 0 35px}
+.eyebrow{font-size:12px;letter-spacing:1.3px;text-transform:uppercase;color:#6a6a69;font-weight:700}
+h1{font:700 clamp(30px,5vw,51px)/1.09 Georgia,serif;letter-spacing:-.8px;text-align:center;margin:10px 0}
+.intro{text-align:center;color:#666;max-width:440px;margin:0 auto 25px;font-size:14px}
+.actions{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.choice{display:flex;flex-direction:column;align-items:center;text-align:center;text-decoration:none;color:inherit;background:#fff;border:1px solid #dededb;border-radius:17px;padding:27px 20px 25px;min-height:236px;box-shadow:0 8px 25px #00000006;transition:transform .15s ease,border-color .15s ease}
+.choice:hover{transform:translateY(-2px);border-color:#555}.choice:focus-visible{outline:3px solid #657b93;outline-offset:3px}
+.choice img{width:86px;height:99px;object-fit:contain;margin:-10px auto 8px}
+.choice .icon{height:99px;display:flex;align-items:center;justify-content:center;font-size:42px;color:#484848}
+.choice strong{font-size:22px;line-height:1.2;margin-top:4px}
+.choice p{font-size:13px;color:#737373;line-height:1.4;margin:9px 0}
+.action-label{margin-top:auto;border-radius:8px;background:#292929;color:#fff;padding:10px 18px;font-size:13px;font-weight:700}
+.choice.website .action-label{background:#efefec;color:#292929}
+footer{padding:15px 0 24px;font-size:12px;color:#777;text-align:center}
+@media(max-width:620px){header{padding:17px 0 4px}.brand{font-size:29px}.tag{font-size:10px}main{padding:20px 0}.actions{gap:11px}.choice{min-height:234px;padding:17px 9px 17px}.choice strong{font-size:19px}.choice p{font-size:12px}.action-label{font-size:12px;padding:9px}.choice img{width:66px}.choice .icon{font-size:37px}}
+@media(max-width:370px){.actions{grid-template-columns:1fr}.choice{min-height:145px;padding:12px}.choice img,.choice .icon{height:55px;margin:0}.choice strong{margin-top:0}.choice p{margin:5px 0}.action-label{margin-top:8px}}
+</style>
+</head>
+<body>
+<div class="shell">
+<header><div class="brand">PureFruit</div><div class="tag">Healthier happier you</div></header>
+<main>
+  <div class="eyebrow">Freshly cold-pressed · 300 ml</div>
+  <h1>Fresh fruit. Pure goodness.</h1>
+  <p class="intro">Explore PureFruit or place your juice order in seconds.</p>
+  <nav class="actions" aria-label="Choose how to continue">
+    <a class="choice website" href="{{ url_for('index') }}">
+      <span class="icon" aria-hidden="true">✳</span>
+      <strong>Visit Website</strong>
+      <p>Discover our juices, promise and subscription plans.</p>
+      <span class="action-label">Go to website</span>
+    </a>
+    <a class="choice" href="{{ url_for('daily_order_page') }}">
+      <img src="{{ url_for('static',filename='fruit/purefruit-bottle.webp') }}" alt="" loading="eager">
+      <strong>Order Juice</strong>
+      <p>Choose a delivery slot and book today's or tomorrow's juice.</p>
+      <span class="action-label">Place an order</span>
+    </a>
+  </nav>
+</main>
+<footer>No added sugar · No added water · No ice</footer>
+</div>
+</body>
+</html>

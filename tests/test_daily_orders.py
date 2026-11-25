@@ -46,7 +46,7 @@ class DailyOrdersTest(unittest.TestCase):
             con.execute("UPDATE daily_menus SET is_open=1 WHERE service_date=?", (self.service_date,))
 
     def form_fields(self):
-        response = self.client.get("/")
+        response = self.client.get("/order")
         self.assertEqual(response.status_code, 200)
         with self.client.session_transaction() as sess:
             return {
@@ -108,7 +108,7 @@ class DailyOrdersTest(unittest.TestCase):
         with app_module.get_db() as con:
             self.assertEqual(con.execute("SELECT COUNT(*) FROM daily_orders").fetchone()[0], 1)
         # Next visit on same browser: details prefilled and hidden until Change is tapped.
-        again = self.client.get("/")
+        again = self.client.get("/order")
         self.assertIn(b"Ordering as", again.data)
         self.assertIn(b"Ananya Sharma", again.data)
         self.assertIn(b'value="9876543210"', again.data)
@@ -121,7 +121,7 @@ class DailyOrdersTest(unittest.TestCase):
             token = sess["csrf_token"]
         r = self.client.post("/daily/forget", data={"csrf_token": token})
         self.assertEqual(r.status_code, 303)
-        self.assertNotIn(b"Ordering as", self.client.get("/").data)
+        self.assertNotIn(b"Ordering as", self.client.get("/order").data)
         with app_module.get_db() as con:
             self.assertEqual(con.execute("SELECT COUNT(*) FROM daily_orders").fetchone()[0], 1)
 
@@ -131,7 +131,7 @@ class DailyOrdersTest(unittest.TestCase):
         self.seed_orders(MAX_DAILY_ORDERS)
         blocked = self.client.post("/", data=fields)
         self.assertEqual(blocked.status_code, 409)
-        closed = self.client.get("/")
+        closed = self.client.get("/order")
         self.assertIn(b"Ordering is currently closed", closed.data)
         with app_module.get_db() as con:
             self.assertEqual(con.execute("SELECT COUNT(*) FROM daily_orders").fetchone()[0], 1000)
@@ -152,7 +152,7 @@ class DailyOrdersTest(unittest.TestCase):
         with app_module.get_db() as con:
             row = con.execute("SELECT deleted_at FROM daily_orders WHERE order_ref='TEST-0'").fetchone()
         self.assertIsNotNone(row["deleted_at"])
-        self.assertIn(b"Number of portions", self.client.get("/").data)
+        self.assertIn(b"Number of portions", self.client.get("/order").data)
 
     def test_cannot_delete_paid_test_or_actual_preparing_order(self):
         self.seed_orders(2)
@@ -360,7 +360,7 @@ class DailyOrdersTest(unittest.TestCase):
     def test_limit_is_1000_orders_and_10_portions(self):
         self.assertEqual(MAX_DAILY_ORDERS, 1000)
         self.open_menu()
-        form = self.client.get("/")
+        form = self.client.get("/order")
         self.assertIn(b'max="10"', form.data)
         self.assertIn(b"Maximum 10 portions per order", form.data)
         self.assertIn(b"Math.min(10,", form.data)
@@ -417,7 +417,7 @@ class DailyOrdersTest(unittest.TestCase):
 
     def test_order_page_is_compact_with_persistent_checkout_and_large_slots(self):
         self.open_menu()
-        page = self.client.get("/")
+        page = self.client.get("/order")
         self.assertEqual(page.status_code, 200)
         self.assertIn(b"height:76px", page.data)
         self.assertIn(b"font-size:18px", page.data)
@@ -474,7 +474,7 @@ class DailyOrdersTest(unittest.TestCase):
         without_csrf = self.client.post(path)
         self.assertEqual(without_csrf.status_code, 403)
         other_browser = app.test_client()
-        other_browser.get("/")
+        other_browser.get("/order")
         with other_browser.session_transaction() as sess:
             other_csrf = sess["csrf_token"]
         rejected = other_browser.post(path, data={"csrf_token": other_csrf})
@@ -503,10 +503,22 @@ class DailyOrdersTest(unittest.TestCase):
 
     def test_main_and_legacy_routes(self):
         self.open_menu()
-        self.assertIn(b"Number of portions", self.client.get("/").data)
+        landing = self.client.get("/")
+        self.assertEqual(landing.status_code, 200)
+        self.assertIn(b"Visit Website", landing.data)
+        self.assertIn(b"Order Juice", landing.data)
+        self.assertIn(b'href="/website"', landing.data)
+        self.assertIn(b'href="/order"', landing.data)
+        self.assertEqual(self.client.post("/").status_code, 405)
+        self.assertIn(b"Number of portions", self.client.get("/order").data)
+        self.assertIn(b"Number of portions", self.client.get("/daily").data)
+        website = self.client.get("/website")
+        self.assertEqual(website.status_code, 200)
+        self.assertIn(b"Fresh juice.", website.data)
+        self.assertIn(b"Order Daily Juice", website.data)
         self.assertEqual(self.client.get("/subscriptions").status_code, 200)
         self.staff_login()
-        self.assertIn(b"Daily Orders", self.client.get("/staff").data)
+        self.assertIn(b"PureFruit", self.client.get("/staff").data)
         self.assertEqual(self.client.get("/staff/subscriptions").status_code, 200)
 
     def test_staff_dashboard_hides_legacy_and_highlights_slots_portions(self):
@@ -534,7 +546,7 @@ class DailyOrdersTest(unittest.TestCase):
         self.assertIn(b'class="big-portions">1</span>', page.data)
         self.assertIn(b".order-table .big-slot", page.data)
         self.assertIn(b".order-table .big-portions", page.data)
-        self.assertIn(b"Morning:", page.data)
+        self.assertIn("8–9 AM".encode("utf-8"), page.data)
         self.assertIn(b"Save type", page.data)
         self.assertIn(b"class=\"type-badge actual\">ACTUAL", page.data)
         csv = self.client.get("/staff/daily.csv?date=" + self.service_date)
@@ -546,6 +558,62 @@ class DailyOrdersTest(unittest.TestCase):
             self.assertEqual(con.execute(
                 "SELECT COUNT(*) FROM daily_orders WHERE order_ref='LEGACY-OLD-1'"
             ).fetchone()[0], 1)
+
+    def test_compact_staff_dashboard_has_status_colors_filters_and_pagination(self):
+        self.seed_orders(27)
+        with app_module.get_db() as con:
+            con.execute("UPDATE daily_orders SET status='delivered' WHERE order_ref='TEST-0'")
+            con.execute("""UPDATE daily_orders SET payment_status='paid',payment_method='upi',
+                paid_at='2026-11-24T08:00:00' WHERE order_ref='TEST-1'""")
+            con.execute("UPDATE daily_orders SET payment_status='pending_verification' WHERE order_ref='TEST-2'")
+            con.execute("UPDATE daily_orders SET status='preparing' WHERE order_ref='TEST-3'")
+        self.staff_login()
+        response = self.client.get("/staff?date=" + self.service_date)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Showing 20 of 27 matching orders", response.data)
+        self.assertIn(b"Page 1 of 2", response.data)
+        self.assertIn(b"state-new", response.data)
+        self.assertIn(b"chip-new", response.data)
+        self.assertIn(b"chip-paid", response.data)
+        self.assertIn(b"chip-delivered", response.data)
+        self.assertIn(b"chip-reported", response.data)
+        self.assertIn(b'<details class="box menu-box"', response.data)
+        self.assertNotIn(b"Customer-wise summary", response.data)
+        page2 = self.client.get("/staff?date="+self.service_date+"&page=2")
+        self.assertIn(b"Showing 7 of 27 matching orders", page2.data)
+        self.assertIn(b"Page 2 of 2", page2.data)
+        delivered = self.client.get("/staff?date="+self.service_date+"&state=delivered")
+        self.assertIn(b"Showing 1 of 1 matching orders", delivered.data)
+        self.assertIn(b"TEST-0", delivered.data)
+        self.assertNotIn(b"TEST-1", delivered.data)
+        paid = self.client.get("/staff?date="+self.service_date+"&state=paid")
+        self.assertIn(b"TEST-1", paid.data)
+        reported = self.client.get("/staff?date="+self.service_date+"&state=reported")
+        self.assertIn(b"TEST-2", reported.data)
+        preparing = self.client.get("/staff?date="+self.service_date+"&state=preparing")
+        self.assertIn(b"TEST-3", preparing.data)
+        afternoon = self.client.get("/staff?date="+self.service_date+"&slot=afternoon")
+        self.assertIn(b"Showing 0 of 0 matching orders", afternoon.data)
+
+    def test_customer_history_moved_to_private_page(self):
+        self.open_menu()
+        self.client.post("/order", data=self.form_fields())
+        self.staff_login()
+        dashboard = self.client.get("/staff?date="+self.service_date)
+        self.assertEqual(dashboard.status_code, 200)
+        self.assertIn(b'href="/staff/customers"', dashboard.data)
+        self.assertNotIn(b"Customer-wise summary", dashboard.data)
+        page = self.client.get("/staff/customers")
+        self.assertEqual(page.status_code, 200)
+        self.assertIn(b"Customer History", page.data)
+        self.assertIn(b"Ananya Sharma", page.data)
+        self.assertIn(b"9876543210", page.data)
+        search = self.client.get("/staff/customers?q=9876543210")
+        self.assertIn(b"Ananya Sharma", search.data)
+        missing = self.client.get("/staff/customers?q=nobody")
+        self.assertNotIn(b"Ananya Sharma", missing.data)
+        other_browser = app.test_client()
+        self.assertEqual(other_browser.get("/staff/customers").status_code, 302)
 
     def test_staff_modifications_require_csrf(self):
         no_login = self.client.post("/staff/daily/menu", data={"juice": "ABC"})
