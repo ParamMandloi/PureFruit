@@ -7,7 +7,10 @@
   <meta name="description" content="PureFruit fresh cold-pressed 300 ml juices. Professional juicing, carefully selected seasonal fruits, and flexible five- or twenty-day subscriptions.">
   <meta name="csrf-token" content="{{ csrf }}">
   <title>PureFruit · Naturally Fresh</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='dhanteras-2026-live') }}">
+  <link rel="stylesheet" href="{{ url_for('static',filename='brand.css',v='purefruit-bottles-1') }}">
   <style>
     /* Promo only: retain the working live website/hero stylesheet unchanged. */
     [hidden]{display:none!important}
@@ -69,9 +72,9 @@
     }
   </style>
 </head>
-<body data-preview="false" data-payments-ready="{{ 'true' if razorpay_ready else 'false' }}">
+<body class="pf-branded" data-preview="false" data-payments-ready="{{ 'true' if razorpay_ready else 'false' }}">
   <header class="topbar wrap">
-    <a href="#top" class="brand brand-logo" aria-label="PureFruit home"><img src="{{ url_for('static', filename='fruit/purefruit-logo.webp', v='visual-2') }}" alt="PureFruit — Naturally Fresh" width="920" height="360" decoding="async"></a>
+    <a href="{{ url_for('homepage') }}" class="brand brand-logo pf-wordmark" aria-label="PureFruit home"><span class="pf-wordmark__pure">PURE</span><span class="pf-wordmark__fruit">Fruit</span></a>
     <nav aria-label="Customer navigation" style="display:flex;align-items:center;gap:12px;margin-left:auto">
       <a href="{{ url_for('daily_order_page') }}" style="color:#333;font-weight:750;font-size:13px;text-decoration:underline;text-underline-offset:4px">Order Daily Juice</a>
       <a href="{{ url_for('my_orders') }}" style="color:#333;font-weight:600;font-size:13px;text-decoration:underline;text-underline-offset:4px">My Orders</a>
@@ -83,7 +86,7 @@
     <section class="hero hero-lineup wrap">
       <div class="hero-copy">
         <div class="eyebrow">NATURALLY FRESH. &nbsp; · &nbsp; L&T SERENE COUNTY</div>
-        <h1>Pure fruit.<br><em>Nothing extra.</em></h1>
+        <h1 class="pf-hero-headline"><span class="pf-caps">PURE</span> <em class="pf-script">Fruit</em><span class="pf-hero-subline">Fresh. Seasonal. Nothing extra.</span></h1>
         <p>Fresh cold-pressed juices made from carefully selected seasonal fruit. Professional juicing, careful hygiene, and real fruit flavour.</p>
         <div class="hero-actions">
           <a class="button button-dark" href="#order">View subscriptions</a>
@@ -223,7 +226,7 @@
     </section>
   </main>
 
-  <footer class="footer"><div class="wrap footer-inner"><div><strong class="footer-brand">PureFruit</strong><span>Naturally Fresh.</span></div><div>Real fruit. Real people. A healthier tomorrow.</div><div>© PureFruit · <a href="https://www.purefruit.in">purefruit.in</a></div></div></footer>
+  <footer class="footer"><div class="wrap footer-inner"><div><strong class="footer-brand pf-footer-brand">PURE <span class="pf-script">Fruit</span></strong><span>Naturally Fresh.</span></div><div>Real fruit. Real people. A healthier tomorrow.</div><div>© PureFruit · <a href="https://www.purefruit.in">purefruit.in</a></div></div></footer>
   <script id="checkout-config" type="application/json">{{ checkout | tojson }}</script>
   <script src="{{ url_for('static', filename='app.js', v='customer-history-1') }}" defer></script>
 </body>

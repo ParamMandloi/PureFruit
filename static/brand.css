@@ -1,0 +1,53 @@
+/* Shared PureFruit visual identity — bottle-inspired, neutral palette.
+   Bold PURE matches the bottle's geometric sans; handwritten Fruit is an
+   open-source signature-style analogue rather than a claim of exact match. */
+@import url("https://fonts.googleapis.com/css2?family=Allura&family=Montserrat:wght@400;500;600;700;800;900&display=swap");
+:root{--pf-ink:#242424;--pf-paper:#f8f8f6;--pf-body:"Montserrat",Arial,Helvetica,sans-serif;--pf-script:"Allura","Brush Script MT","Segoe Script",cursive}
+body.pf-branded{font-family:var(--pf-body);letter-spacing:-.012em;-webkit-font-smoothing:antialiased}
+.pf-wordmark,.pf-wordmark.brand.brand-logo{
+  display:inline-flex;align-items:baseline;justify-content:flex-start;
+  position:relative;gap:0;white-space:nowrap;text-decoration:none;
+  font-family:var(--pf-body);font-size:32px;line-height:1.1;
+  font-weight:900;letter-spacing:0;color:var(--pf-ink);
+  padding:3px 3px 5px 0;min-width:0;height:auto;max-height:none;
+}
+.pf-wordmark__pure{font-family:var(--pf-body);font-weight:900;letter-spacing:-.085em;font-size:1em;line-height:.9}
+.pf-wordmark__fruit{font-family:var(--pf-script);font-weight:400;letter-spacing:-.075em;font-size:1.34em;line-height:.8;margin-left:-.10em;transform:rotate(-5deg) translateY(.09em);display:inline-block}
+.pf-wordmark--small{font-size:28px}
+.pf-wordmark.pf-order-brand{font-family:var(--pf-body);font-size:28px;font-weight:900;letter-spacing:0;line-height:1.05;display:inline-flex;align-items:baseline;color:#242424;text-decoration:none;margin:0 0 3px;padding:3px 0 2px}
+.pf-footer-brand{font-family:var(--pf-body)!important;font-weight:900!important;letter-spacing:-.065em}
+.pf-footer-brand .pf-script{font-size:1.65em;vertical-align:-.09em;margin-left:-.09em}
+.pf-branded .plan-card strong,.pf-branded .summary-price,.pf-branded .summary-plan{font-family:var(--pf-body);font-weight:800;letter-spacing:-.055em}
+.pf-branded .hero-lineup .hero-copy h1.pf-hero-headline{font-family:var(--pf-body);font-weight:900;letter-spacing:-.055em}
+.pf-branded .quality-card h3,.pf-branded .coming-soon strong{font-family:var(--pf-body);font-weight:800}
+
+.pf-wordmark--large{font-size:clamp(40px,6vw,65px)}
+.pf-wordmark:focus-visible{outline:2px solid #666;outline-offset:5px;border-radius:4px}
+.pf-script{font-family:var(--pf-script)!important;font-style:normal!important;font-weight:400!important;letter-spacing:-.035em!important}
+.pf-caps{font-family:var(--pf-body);font-weight:900;letter-spacing:-.06em}
+.pf-hero-headline,.hero-copy h1.pf-hero-headline{
+  font-family:var(--pf-body);font-weight:900;letter-spacing:-.055em;
+  line-height:1.05;color:var(--pf-ink)
+}
+.hero-copy .pf-hero-headline .pf-script{
+  font-size:1.2em;line-height:.8;display:inline-block;
+  margin-left:-.08em;transform:rotate(-4deg) translateY(.08em);
+}
+.pf-hero-subline{display:block;font-family:var(--pf-body);font-size:.55em;
+  font-weight:500;letter-spacing:-.035em;color:#5f5f5f;line-height:1.3;margin-top:.25em}
+.pf-brand-line{font-family:var(--pf-body);text-transform:uppercase;letter-spacing:.17em;font-size:11px;font-weight:700;color:#777}
+.pf-branded .button,.pf-branded button,.pf-branded input,.pf-branded select,.pf-branded textarea{
+  font-family:var(--pf-body)
+}
+.pf-branded .button,.pf-branded .action-label{font-weight:750}
+.pf-branded .section-heading h2{font-family:var(--pf-body);font-weight:800;letter-spacing:.16em}
+.pf-branded .quality-card h3,.pf-branded .coming-soon strong{font-family:var(--pf-body);font-weight:800;letter-spacing:-.045em}
+.pf-branded .hero-art img,.pf-bottle-lineup img{display:block;max-width:100%;object-fit:cover}
+.pf-bottle-lineup{background:#f0f0ed;border-radius:17px;overflow:hidden}
+.pf-bottle-lineup img{width:100%;height:100%;object-position:center}
+@media(max-width:620px){
+  .pf-wordmark,.pf-wordmark.brand.brand-logo{font-size:27px}
+  .pf-wordmark--small{font-size:25px}
+  .pf-wordmark--large{font-size:37px}
+  .pf-bottle-lineup{border-radius:12px}
+}

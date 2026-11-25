@@ -4,55 +4,78 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#f8f8f6">
-<meta name="description" content="Explore PureFruit or order today's freshly cold-pressed juice in two taps.">
+<meta name="description" content="PureFruit fresh cold-pressed juice. Explore the website or order today's fresh juice.">
 <title>PureFruit | Fresh juice, your way</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="{{ url_for('static',filename='brand.css',v='purefruit-bottles-1') }}">
 <style>
-*{box-sizing:border-box}body{margin:0;min-height:100svh;background:#f8f8f6;color:#252525;font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-.shell{width:min(860px,calc(100% - 32px));margin:0 auto;min-height:100svh;display:flex;flex-direction:column}
-header{padding:24px 0 8px;display:flex;justify-content:space-between;align-items:center;gap:14px}
-.brand{font:700 33px Georgia,serif;letter-spacing:-1px}
-.tag{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#777;font-weight:700}
-main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 0 35px}
-.eyebrow{font-size:12px;letter-spacing:1.3px;text-transform:uppercase;color:#6a6a69;font-weight:700}
-h1{font:700 clamp(30px,5vw,51px)/1.09 Georgia,serif;letter-spacing:-.8px;text-align:center;margin:10px 0}
-.intro{text-align:center;color:#666;max-width:440px;margin:0 auto 25px;font-size:14px}
-.actions{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-.choice{display:flex;flex-direction:column;align-items:center;text-align:center;text-decoration:none;color:inherit;background:#fff;border:1px solid #dededb;border-radius:17px;padding:27px 20px 25px;min-height:236px;box-shadow:0 8px 25px #00000006;transition:transform .15s ease,border-color .15s ease}
-.choice:hover{transform:translateY(-2px);border-color:#555}.choice:focus-visible{outline:3px solid #657b93;outline-offset:3px}
-.choice img{width:86px;height:99px;object-fit:contain;margin:-10px auto 8px}
-.choice .icon{height:99px;display:flex;align-items:center;justify-content:center;font-size:42px;color:#484848}
-.choice strong{font-size:22px;line-height:1.2;margin-top:4px}
-.choice p{font-size:13px;color:#737373;line-height:1.4;margin:9px 0}
-.action-label{margin-top:auto;border-radius:8px;background:#292929;color:#fff;padding:10px 18px;font-size:13px;font-weight:700}
-.choice.website .action-label{background:#efefec;color:#292929}
-footer{padding:15px 0 24px;font-size:12px;color:#777;text-align:center}
-@media(max-width:620px){header{padding:17px 0 4px}.brand{font-size:29px}.tag{font-size:10px}main{padding:20px 0}.actions{gap:11px}.choice{min-height:234px;padding:17px 9px 17px}.choice strong{font-size:19px}.choice p{font-size:12px}.action-label{font-size:12px;padding:9px}.choice img{width:66px}.choice .icon{font-size:37px}}
-@media(max-width:370px){.actions{grid-template-columns:1fr}.choice{min-height:145px;padding:12px}.choice img,.choice .icon{height:55px;margin:0}.choice strong{margin-top:0}.choice p{margin:5px 0}.action-label{margin-top:8px}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100svh;background:#f8f8f6;color:#262626;font-size:15px;line-height:1.45}
+.shell{width:min(900px,calc(100% - 32px));margin:0 auto;min-height:100svh;display:flex;flex-direction:column}
+header{padding:20px 0 5px;display:flex;justify-content:space-between;align-items:center;gap:15px}
+.tag{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#6a6a6a;font-weight:700;text-align:right}
+main{flex:1;display:flex;flex-direction:column;justify-content:center;padding:10px 0 22px}
+.eyebrow{font-size:10px;letter-spacing:1.7px;text-transform:uppercase;color:#666;font-weight:750;text-align:center;margin:10px 0 4px}
+h1{font-size:clamp(26px,4vw,39px);font-weight:900;letter-spacing:-.065em;line-height:1.1;text-align:center;margin:8px 0 6px}
+h1 .pf-script{font-size:1.28em;display:inline-block;transform:rotate(-4deg) translateY(.1em);line-height:.7}
+.intro{text-align:center;color:#686868;max-width:510px;margin:0 auto 17px;font-size:13px}
+.hero-bottles{width:100%;aspect-ratio:2/1;max-height:340px;margin:0 auto 19px}
+.hero-bottles img{width:100%;height:100%;object-fit:cover}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%}
+.choice{display:flex;align-items:center;justify-content:space-between;gap:14px;text-decoration:none;color:inherit;background:#fff;border:1px solid #dfdfdb;border-radius:13px;padding:16px 19px;min-height:112px;box-shadow:0 5px 18px #00000005;transition:border-color .15s ease,transform .15s ease}
+.choice:hover{transform:translateY(-2px);border-color:#777}
+.choice:focus-visible{outline:3px solid #777;outline-offset:3px}
+.choice strong{display:block;font-size:19px;font-weight:800;letter-spacing:-.05em;margin-bottom:4px}
+.choice p{font-size:11px;color:#696969;margin:0}
+.action-label{font-size:12px;white-space:nowrap;padding:10px 12px;background:#272727;color:#fff;border-radius:8px;font-weight:750}
+.choice.website .action-label{background:#ecece9;color:#252525}
+footer{padding:12px 0 19px;font-size:11px;text-align:center;color:#777;letter-spacing:.02em}
+@media(max-width:660px){
+  header{padding:12px 0 5px}.tag{font-size:9px}
+  main{justify-content:flex-start;padding:6px 0 16px}
+  .eyebrow{font-size:9px;margin:10px 0 2px}
+  h1{font-size:27px;margin:7px 0 5px}
+  .intro{font-size:11px;margin-bottom:12px}
+  .hero-bottles{height:auto;aspect-ratio:2/1;margin-bottom:13px}
+  .actions{gap:9px}
+  .choice{display:flex;flex-direction:column;text-align:center;justify-content:space-between;align-items:stretch;min-height:155px;padding:13px 9px;gap:9px}
+  .choice strong{font-size:16px;white-space:nowrap}
+  .choice p{font-size:11px;line-height:1.38}
+  .action-label{padding:10px 5px;font-size:11px}
+  footer{padding:12px 0 18px;font-size:10px}
+}
+@media(max-width:345px){.choice strong{font-size:14px}.choice p{font-size:10px}.action-label{font-size:10px}}
 </style>
 </head>
-<body>
+<body class="pf-branded">
 <div class="shell">
-<header><div class="brand">PureFruit</div><div class="tag">Healthier happier you</div></header>
-<main>
-  <div class="eyebrow">Freshly cold-pressed · 300 ml</div>
-  <h1>Fresh fruit. Pure goodness.</h1>
-  <p class="intro">Explore PureFruit or place your juice order in seconds.</p>
-  <nav class="actions" aria-label="Choose how to continue">
-    <a class="choice website" href="{{ url_for('index') }}">
-      <span class="icon" aria-hidden="true">✳</span>
-      <strong>Visit Website</strong>
-      <p>Discover our juices, promise and subscription plans.</p>
-      <span class="action-label">Go to website</span>
-    </a>
-    <a class="choice" href="{{ url_for('daily_order_page') }}">
-      <img src="{{ url_for('static',filename='fruit/purefruit-bottle.webp') }}" alt="" loading="eager">
-      <strong>Order Juice</strong>
-      <p>Choose a delivery slot and book today's or tomorrow's juice.</p>
-      <span class="action-label">Place an order</span>
-    </a>
-  </nav>
-</main>
-<footer>No added sugar · No added water · No ice</footer>
+  <header>
+    <a class="pf-wordmark" href="{{ url_for('homepage') }}" aria-label="PureFruit home"><span class="pf-wordmark__pure">PURE</span><span class="pf-wordmark__fruit">Fruit</span></a>
+    <span class="tag">Healthier happier you</span>
+  </header>
+  <main>
+    <div class="eyebrow">Cold-pressed · 100% natural · 300 ml</div>
+    <h1>Fresh <span class="pf-script">Fruit.</span> Pure goodness.</h1>
+    <p class="intro">Real seasonal fruit. No preservatives, added sugar, ice or water.</p>
+    <div class="hero-bottles pf-bottle-lineup">
+      <img src="{{ url_for('static',filename='fruit/purefruit-five-bottles.webp',v='brand-home-1') }}"
+           width="900" height="450"
+           alt="Five PureFruit bottles in yellow, red and orange, displaying our signature PURE Fruit labels"
+           fetchpriority="high" decoding="async">
+    </div>
+    <nav class="actions" aria-label="Choose how to continue">
+      <a class="choice website" href="{{ url_for('index') }}">
+        <span><strong>Visit Website</strong><p>Our juices, quality promise and subscriptions.</p></span>
+        <span class="action-label">Go to website</span>
+      </a>
+      <a class="choice order" href="{{ url_for('daily_order_page') }}">
+        <span><strong>Order Juice</strong><p>Book your fresh juice in a few simple steps.</p></span>
+        <span class="action-label">Place an order</span>
+      </a>
+    </nav>
+  </main>
+  <footer>Carefully selected fruit · Freshly cold-pressed · Delivered fresh</footer>
 </div>
 </body>
 </html>
