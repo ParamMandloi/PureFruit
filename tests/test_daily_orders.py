@@ -615,6 +615,49 @@ class DailyOrdersTest(unittest.TestCase):
         other_browser = app.test_client()
         self.assertEqual(other_browser.get("/staff/customers").status_code, 302)
 
+    def test_subscription_prices_and_bottle_hero_are_live(self):
+        self.assertEqual(app_module.PLANS, {5: 475, 20: 1800})
+        config_response = self.client.get("/api/checkout-config")
+        self.assertEqual(config_response.status_code, 200)
+        data = config_response.get_json()
+        self.assertEqual(data["regular_plans"], {"5": 475, "20": 1800})
+        self.assertNotIn("10", data["plans"])
+        self.assertEqual(data["plans"], {"5": 475, "20": 1800})
+        website = self.client.get("/website")
+        self.assertEqual(website.status_code, 200)
+        self.assertIn(b"purefruit-five-bottles.webp", website.data)
+        self.assertIn("₹475".encode("utf-8"), website.data)
+        self.assertIn("₹1800".encode("utf-8"), website.data)
+        self.assertNotIn(b'value="10"', website.data)
+        self.assertIn(b"Seasonal fruit comes first", website.data)
+        self.assertIn(b"indicative, not fixed", website.data)
+        self.assertIn(b"Pomegranate juice", website.data)
+        self.assertIn(b"COMING SOON", website.data)
+        self.assertIn(b"Mosambi &amp; orange", website.data)
+        self.assertIn("2–3 hours".encode("utf-8"), website.data)
+        hero = self.client.get("/static/fruit/purefruit-five-bottles.webp")
+        self.assertEqual(hero.status_code, 200)
+        self.assertEqual(hero.mimetype, "image/webp")
+        self.assertGreater(len(hero.data), 15000)
+
+    def test_new_subscription_checkout_amounts_and_old_orders_kept(self):
+        self.assertEqual(app_module.price_for_plan(5), 475)
+        self.assertEqual(app_module.price_for_plan(20), 1800)
+        self.assertTrue(app_module.allowed_saved_subscription_amount(5, 599))
+        self.assertTrue(app_module.allowed_saved_subscription_amount(10, 1099))
+        self.assertTrue(app_module.allowed_saved_subscription_amount(10, 824))
+        self.assertTrue(app_module.allowed_saved_subscription_amount(20, 1999))
+        self.assertFalse(app_module.allowed_saved_subscription_amount(10, 999))
+        old_order = {
+            "order_ref": "PF-LEGACY10-123456",
+            "payment_method": "upi_qr",
+            "plan_days": 10,
+            "price": 1099,
+        }
+        uri = app_module.create_upi_uri(old_order)
+        self.assertIn("am=1099.00", uri)
+        self.assertIn("pa=9619140077-huf%40ybl", uri)
+
     def test_staff_modifications_require_csrf(self):
         no_login = self.client.post("/staff/daily/menu", data={"juice": "ABC"})
         self.assertEqual(no_login.status_code, 302)

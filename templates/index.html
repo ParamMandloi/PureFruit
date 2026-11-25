@@ -29,6 +29,44 @@
     .upi-qr-contents .upi-dynamic-qr{display:block;max-width:min(280px,100%);height:auto;margin:8px auto 10px}
     .upi-qr-contents .gray-link{display:inline-block;margin-top:5px;padding:9px 6px}
     .upi-pay-choices[hidden],.upi-qr-details [hidden],.upi-qr-contents [hidden]{display:none!important}
+
+    /* Premium PureFruit collection: fruit colors lead, everything else neutral. */
+    .hero-lineup{grid-template-columns:minmax(0,.84fr) minmax(0,1.16fr);gap:25px;min-height:0;padding:33px 0 36px}
+    .hero-lineup .hero-copy h1{font-size:clamp(44px,5.3vw,68px);line-height:1.04}
+    .hero-lineup .hero-art{display:block;min-height:0;max-height:none;width:100%;height:auto;aspect-ratio:2/1;background:#efefed;border-radius:17px;overflow:hidden;margin:0}
+    .hero-lineup .hero-juice{display:block;width:100%;height:100%}
+    .hero-lineup .hero-juice>img{display:block;width:100%;height:100%;max-height:none;max-width:none;object-fit:cover;filter:none}
+    .hero-lineup .hero-actions .button-outline{border:1px solid #aaa;background:transparent;color:#333}
+    .season-note{border:1px solid #dbdbd7;background:#f2f2ef;padding:14px 17px;border-radius:10px;font-size:13px;color:#555;line-height:1.6;margin:-14px 0 28px}
+    .quality-section{margin:15px auto 48px}
+    .quality-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    .quality-card{background:#fff;border:1px solid #dededa;border-radius:13px;padding:20px}
+    .quality-card h3{font:700 21px/1.2 Georgia,serif;margin:7px 0}
+    .quality-card small{letter-spacing:1.5px;font-size:10px;font-weight:700;color:#888}
+    .quality-card p,.consume-card p{font-size:13px;color:#626262;line-height:1.65;margin:0}
+    .quality-intro{max-width:700px;font-size:14px;color:#686868;line-height:1.7}
+    .consume-guide{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:15px}
+    .consume-card{border:1px solid #dededa;border-radius:11px;padding:16px 18px;background:#f6f6f3}
+    .consume-card strong{display:block;margin-bottom:6px;font-size:14px}
+    .consume-caution{font-size:11px;color:#777;margin:10px 0}
+    .coming-soon{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid #ddd;margin-top:20px;padding:18px 0 0}
+    .coming-soon strong{font:700 21px Georgia,serif}
+    .coming-soon span{border:1px solid #bbb;border-radius:22px;padding:6px 12px;font-size:11px;font-weight:700;color:#666;letter-spacing:1px}
+    .subscription-season-note{font-size:12px;color:#666;line-height:1.6;margin:10px 0 0}
+    .plan-options{grid-template-columns:repeat(2,minmax(0,1fr))}
+    @media(max-width:620px){
+      .hero-lineup{display:flex;flex-direction:column;gap:15px;padding-top:22px;padding-bottom:23px}
+      .hero-lineup .hero-copy h1{font-size:42px;margin:16px 0 12px}
+      .hero-lineup .hero-art{flex:none;width:100%;height:auto;min-height:0;max-height:none;aspect-ratio:2/1;border-radius:11px;margin:0}
+      .hero-lineup .hero-juice{width:100%;height:100%}
+      .hero-lineup .hero-juice>img{width:100%;height:100%;max-height:none}
+      .hero-lineup .hero-actions{gap:8px}
+      .hero-lineup .hero-actions .button{padding:9px 12px;font-size:12px;min-height:42px}
+      .season-note{font-size:12px;margin:-6px 0 24px;padding:12px}
+      .quality-grid,.consume-guide{grid-template-columns:1fr}
+      .quality-card{padding:15px}
+      .quality-section{margin-bottom:31px}
+    }
   </style>
 </head>
 <body data-preview="false" data-payments-ready="{{ 'true' if razorpay_ready else 'false' }}">
@@ -42,21 +80,21 @@
   </header>
 
   <main id="top">
-    <section class="hero wrap">
+    <section class="hero hero-lineup wrap">
       <div class="hero-copy">
         <div class="eyebrow">NATURALLY FRESH. &nbsp; · &nbsp; L&T SERENE COUNTY</div>
-        <h1>Fresh juice.<br><em>Every weekday.</em></h1>
-        <p>Real fruit, freshly prepared and delivered to your doorstep. Simple subscriptions. One fixed daily delivery slot.</p>
+        <h1>Pure fruit.<br><em>Nothing extra.</em></h1>
+        <p>Fresh cold-pressed juices made from carefully selected seasonal fruit. Professional juicing, careful hygiene, and real fruit flavour.</p>
         <div class="hero-actions">
-          <a class="button button-dark" href="#order">Choose a plan <span aria-hidden="true">↗</span></a>
-          <span class="hero-small">300 ml per bottle<br>Monday – Friday</span>
+          <a class="button button-dark" href="#order">View subscriptions</a>
+          <a class="button button-outline" href="{{ url_for('daily_order_page') }}">Order today's juice</a>
         </div>
       </div>
-      <div class="hero-art"><div class="hero-juice"><img src="{{ url_for('static', filename='fruit/purefruit-bottle.webp', v='visual-2') }}" alt="PureFruit 300 ml juice bottle" width="498" height="900" fetchpriority="high" decoding="async"></div></div>
+      <div class="hero-art"><div class="hero-juice"><img src="{{ url_for('static', filename='fruit/purefruit-five-bottles.webp', v='bottle-collection-nov25') }}" alt="Five PureFruit bottles, with white caps and fresh yellow, red and orange juices" width="900" height="450" fetchpriority="high" decoding="async"></div></div>
     </section>
 
     <section class="wrap schedule-section" aria-labelledby="schedule-heading">
-      <div class="section-heading"><h2 id="schedule-heading">OUR JUICES</h2><span>One delicious fruit blend each weekday</span></div>
+      <div class="section-heading"><h2 id="schedule-heading">OUR JUICES</h2><span>Indicative five-day seasonal menu</span></div>
       <div class="fruit-row">
         <article class="fruit"><img src="{{ url_for('static', filename='fruit/mosambi.webp', v='visual-2') }}" alt="Sweet lime" width="150" height="125" loading="eager" decoding="async"><small>MONDAY</small><strong>Mosambi</strong></article>
         <article class="fruit"><img src="{{ url_for('static', filename='fruit/pineapple.webp', v='visual-2') }}" alt="Pineapple" width="150" height="125" loading="eager" decoding="async"><small>TUESDAY</small><strong>Pineapple</strong></article>
@@ -64,13 +102,31 @@
         <article class="fruit"><img src="{{ url_for('static', filename='fruit/orange.webp', v='visual-2') }}" alt="Orange" width="150" height="125" loading="eager" decoding="async"><small>THURSDAY</small><strong>Orange</strong></article>
         <article class="fruit"><img src="{{ url_for('static', filename='fruit/watermelon.webp', v='visual-2') }}" alt="Watermelon" width="150" height="125" loading="eager" decoding="async"><small>FRIDAY</small><strong>Watermelon</strong></article>
       </div>
+      <p class="season-note"><strong>Seasonal fruit comes first.</strong> This five-day menu is indicative, not fixed. Juices may change based on seasonal availability, fruit quality and taste. We always choose the best available seasonal fruits to make every bottle as fresh and flavourful as possible.</p>
     </section>
 
     <section class="wrap promise-section" aria-label="Our promise">
       <div><span class="promise-icon">◯</span><strong>300 ml</strong><small>per bottle</small></div>
       <div><span class="promise-icon">✳</span><strong>No added</strong><small>sugar, water or ice</small></div>
       <div><span class="promise-icon">❀</span><strong>Freshly</strong><small>prepared</small></div>
-      <div><span class="promise-icon">◷</span><strong>Enjoy within</strong><small>2 hours</small></div>
+      <div><span class="promise-icon">◷</span><strong>Drink fresh</strong><small>see fruit-specific guidance</small></div>
+    </section>
+
+
+    <section class="wrap quality-section" aria-labelledby="quality-heading">
+      <div class="section-heading"><h2 id="quality-heading">THE PUREFRUIT PROMISE</h2><span>Care from selection to every bottle</span></div>
+      <p class="quality-intro">Our aim is simple: fresh fruit, professional extraction and thoughtful hygiene, so you enjoy the natural taste of the season.</p>
+      <div class="quality-grid">
+        <article class="quality-card"><small>01 · SOURCING</small><h3>Season's best</h3><p>We select fruit from quality-conscious sources, choosing what is freshest and tastes best rather than following a rigid menu.</p></article>
+        <article class="quality-card"><small>02 · EXTRACTION</small><h3>Professional juicing</h3><p>We use professional-grade juicing machines and prepare juice in small, freshly pressed batches, without added sugar, water or ice.</p></article>
+        <article class="quality-card"><small>03 · HYGIENE</small><h3>Clean at every step</h3><p>We take careful precautions with thorough fruit washing, bottle sanitization, clean equipment and hygienic juice handling.</p></article>
+      </div>
+      <div class="consume-guide">
+        <div class="consume-card"><strong>Mosambi &amp; orange · Enjoy within 1 hour</strong><p>Citrus juice can change in flavour or become bitter quickly. Please drink it as soon as you receive it.</p></div>
+        <div class="consume-card"><strong>ABC &amp; pineapple · Best enjoyed fresh</strong><p>Enjoy promptly; if not drinking immediately, refrigerate and aim to consume within 2–3 hours.</p></div>
+      </div>
+      <p class="consume-caution">Keep juice chilled until drinking. These are freshness and taste recommendations, not a guarantee of safety when juice is left unrefrigerated.</p>
+      <div class="coming-soon"><div><strong>Pomegranate juice</strong><div class="muted">Another naturally delicious option is on its way.</div></div><span>COMING SOON</span></div>
     </section>
 
     <section class="wrap order-section" id="order" aria-labelledby="order-heading">
@@ -85,7 +141,6 @@
             <legend><span class="step-number">01</span> Choose your plan</legend>
             <div class="plan-options">
               <label class="plan-card is-selected"><input name="plan_days" type="radio" value="5" checked required><span class="plan-title">5 days</span><span class="plan-caption">1 week</span><strong class="plan-price" data-plan="5">₹{{ checkout.plans['5'] | int }}</strong><span class="choose-mark" aria-hidden="true">✓</span></label>
-              <label class="plan-card"><input name="plan_days" type="radio" value="10"><span class="plan-title">10 days</span><span class="plan-caption">2 weeks</span><strong class="plan-price" data-plan="10">₹{{ checkout.plans['10'] | int }}</strong><span class="choose-mark" aria-hidden="true">✓</span></label>
               <label class="plan-card"><input name="plan_days" type="radio" value="20"><span class="plan-title">20 days</span><span class="plan-caption">4 weeks</span><strong class="plan-price" data-plan="20">₹{{ checkout.plans['20'] | int }}</strong><span class="choose-mark" aria-hidden="true">✓</span></label>
             </div>
           </fieldset>
@@ -97,6 +152,7 @@
               <label class="slot-card"><input type="radio" name="delivery_slot" value="afternoon"><span class="slot-icon" aria-hidden="true">◷</span><span><strong>Afternoon</strong><small>4:00 – 5:00 PM</small></span><span class="radio-dot" aria-hidden="true"></span></label>
             </div>
             <p class="hint">Your chosen slot remains the same for the entire subscription.</p>
+            <p class="subscription-season-note">The weekday juice selection is indicative. We may change fruits according to seasonal availability, freshness and taste.</p>
           </fieldset>
 
           <fieldset class="field-group">
@@ -123,7 +179,7 @@
           <div id="form-success" class="form-success" role="status" hidden></div>
           <section class="upi-checkout" id="upi-checkout" hidden aria-live="polite">
             <h3>Pay for your subscription</h3>
-            <div class="upi-due" id="upi-due">₹599</div>
+            <div class="upi-due" id="upi-due">₹475</div>
             <p class="upi-order-ref" id="upi-order-ref"></p>
             <p id="upi-app-guidance" class="hint" hidden>Choose the app you use. The amount and recipient will be filled in. Return here after payment.</p>
             <div id="upi-pay-choices" class="upi-pay-choices" hidden>
@@ -153,13 +209,13 @@
           <div class="summary-plan" id="summary-plan">5 delivery days</div>
           <div class="summary-price" id="summary-price">₹{{ checkout.plans['5'] | int }}</div>
           <div class="dhanteras-savings" id="dhanteras-savings" {% if not checkout.promo_active %}hidden{% endif %}>
-            <span id="summary-regular-price">₹599</span>
+            <span id="summary-regular-price">₹475</span>
             <strong>25% OFF · Ends 6 Nov</strong>
           </div>
           <div class="summary-line"><span>Bottle size</span><strong>300 ml</strong></div>
           <div class="summary-line"><span>Delivery days</span><strong>Mon – Fri</strong></div>
           <div class="summary-line"><span>Slot</span><strong id="summary-slot">8 – 9 AM</strong></div>
-          <div class="summary-line"><span>Daily juice</span><strong>Fixed weekly menu</strong></div>
+          <div class="summary-line"><span>Daily juice</span><strong>Seasonal · indicative menu</strong></div>
           <div class="summary-divider"></div>
           <p><strong>No added sugar. No added water. No ice.</strong><br>Nothing complicated — just fruit and a fresher routine.</p>
           <div class="summary-support">NEED HELP? <a href="https://wa.me/918074062979" rel="noopener noreferrer">WhatsApp 8074062979</a></div>

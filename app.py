@@ -51,7 +51,17 @@ UPI_PAYEE_ADDRESS = "9619140077-huf@ybl"
 UPI_PAYEE_NAME = "PARAMPRAKASH RAJENDRA MANDLOI KARTA"
 UPI_PAYEE_MCC = os.getenv("UPI_PAYEE_MCC", "0000").strip()
 LAUNCH_DATE = date(2026, 11, 6)
-PLANS = {5: 599, 10: 1099, 20: 1999}  # Regular rupee prices
+PLANS = {5: 475, 20: 1800}  # New subscriptions only; one 300 ml juice per delivery day
+# Preserve historical order totals and legacy 10-day subscriptions when a
+# previous customer reopens their existing UPI payment / QR screen.
+HISTORICAL_PLAN_PRICES = {5: 599, 10: 1099, 20: 1999}
+def allowed_saved_subscription_amount(days, amount):
+    values = set()
+    for plan in (PLANS, HISTORICAL_PLAN_PRICES):
+        if days in plan:
+            values.update((plan[days], (plan[days] * 75) // 100))
+    return int(amount) in values
+
 # Offer begins on 5 November in India time, and ends just as 7 November begins.
 # All checkout prices use the server clock. Existing orders retain their stored price.
 PROMO_START_IST = datetime(2026, 11, 5, 16, 0, tzinfo=IST)
@@ -562,8 +572,8 @@ def create_upi_uri(order, mode="01"):
     still available as a fallback if an app rejects amount-prefilled links.
     """
     days = int(order["plan_days"])
-    if (order.get("payment_method") != "upi_qr" or days not in PLANS or
-            int(order["price"]) not in (PLANS[days], DHANTERAS_PRICES[days])):
+    if (order.get("payment_method") != "upi_qr" or
+            not allowed_saved_subscription_amount(days, order["price"])):
         raise ValueError("Invalid UPI order")
     if not re.fullmatch(r"PF-[A-Za-z0-9-]{8,40}", order["order_ref"]):
         raise ValueError("Invalid order reference")
