@@ -500,9 +500,12 @@ class DailyOrdersTest(unittest.TestCase):
         self.assertEqual(slots_for_date(day + timedelta(days=1), dt(17, 0)),
                          ("morning", "afternoon"))
         self.assertEqual(slots_for_date(date(2026, 11, 22), dt(17, 0)), ())
-        self.assertEqual(slots_for_date(date(2026, 11, 28), dt(8, 59)), ("morning", "afternoon"))
-        self.assertEqual(slots_for_date(date(2026, 11, 28), dt(9, 0)), ("afternoon",))
-        self.assertEqual(slots_for_date(date(2026, 11, 28), dt(17, 0)), ())
+        saturday = date(2026, 11, 28)
+        def sat_dt(h, m):
+            return datetime.combine(saturday, time(h, m), tzinfo=tz)
+        self.assertEqual(slots_for_date(saturday, sat_dt(8, 59)), ("morning", "afternoon"))
+        self.assertEqual(slots_for_date(saturday, sat_dt(9, 0)), ("afternoon",))
+        self.assertEqual(slots_for_date(saturday, sat_dt(17, 0)), ())
 
     def test_saturday_trial_can_be_ordered_with_named_flavour(self):
         now = app_module.now_ist()
