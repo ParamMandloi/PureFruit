@@ -21,6 +21,7 @@ JUICES = {
     "Orange": "fruit/orange.webp",
     "Mosambi": "fruit/mosambi.webp",
     "Watermelon": "fruit/watermelon.webp",
+    "Trial Juice": "fruit/purefruit-bottle.webp",
 }
 SLOTS = {"morning": "8–9 AM", "afternoon": "4–5 PM"}
 STATUSES = ("new", "preparing", "delivered", "cancelled")
@@ -57,7 +58,7 @@ def build_phonepe_payment_uri(payee_address, payee_name, order):
 
 def slots_for_date(target, now):
     """Pure IST date/time rule; exactly 09:00 closes morning and 17:00 closes evening."""
-    if target.weekday() >= 5 or target < now.date():
+    if target.weekday() == 6 or target < now.date():
         return ()
     if target > now.date():
         return ("morning", "afternoon")
@@ -106,10 +107,17 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
         return day
 
     def service_days():
+        """Today, next weekday, and the upcoming Saturday trial (when enabled)."""
         now = now_ist()
         today = now.date()
         future = next_weekday(today + timedelta(days=1))
-        return [today, future] if today.weekday() < 5 else [future]
+        saturday = today + timedelta(days=(5 - today.weekday()) % 7)
+        if saturday == today and now.time() >= time(17, 0):
+            saturday += timedelta(days=7)
+        dates = {future, saturday}
+        if today.weekday() != 6:
+            dates.add(today)
+        return sorted(dates)
 
     with get_db() as con:
         con.execute("""CREATE TABLE IF NOT EXISTS daily_menu (
@@ -151,6 +159,10 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
             unit_price INTEGER NOT NULL, is_open INTEGER NOT NULL DEFAULT 0,
             updated_at TEXT NOT NULL
         )""")
+        # A Saturday trial can change its flavour weekly without changing old orders.
+        menu_columns = {c[1] for c in con.execute("PRAGMA table_info(daily_menus)")}
+        if "trial_flavour" not in menu_columns:
+            con.execute("ALTER TABLE daily_menus ADD COLUMN trial_flavour TEXT NOT NULL DEFAULT ''")
         # Non-destructive one-time migration of the original one-day menu.
         con.execute("""INSERT OR IGNORE INTO daily_menus
             (service_date, juice, unit_price, is_open, updated_at)
@@ -173,6 +185,12 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
         # Restrict cleanup to the exact four references in the user's screenshot.
         # A row remains untouched if staff has verified payment since then.
         retire_screenshot_test_orders(con, now_ist().isoformat(timespec="seconds"))
+
+    def label_for_juice(menu):
+        if menu["juice"] == "Trial Juice":
+            flavour = (menu.get("trial_flavour") or "").strip()
+            return "Trial Juice" + (" · " + flavour if flavour else "")
+        return menu["juice"] + " Juice"
 
     def menus_for_dates(days=None):
         dates = days or service_days()
@@ -226,6 +244,8 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
                     "value": key + "|" + slot, "service_date": key,
                     "slot": slot, "slot_label": SLOTS[slot],
                     "heading": heading, "juice": scheduled["juice"],
+                    "label": label_for_juice(scheduled),
+                    "is_trial": scheduled["juice"] == "Trial Juice",
                     "unit_price": scheduled["unit_price"],
                     "image": JUICES.get(scheduled["juice"], ""),
                     "version": scheduled["updated_at"],
@@ -239,8 +259,13 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
             row = con.execute(
                 "SELECT * FROM daily_menus WHERE service_date>=? ORDER BY service_date LIMIT 1",
                 (now_ist().date().isoformat(),)).fetchone()
-        return dict(row) if row else {
-            "juice": "Fresh", "unit_price": 99, "service_date": "", "image": ""
+        if row:
+            menu = dict(row)
+            menu["label"] = label_for_juice(menu)
+            return menu
+        return {
+            "juice": "Fresh", "label": "Fresh Juice",
+            "unit_price": 99, "service_date": "", "image": ""
         }
 
     def render_form(error=None, status=200):
@@ -333,7 +358,8 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
                     (fingerprint, customer_id, stamp))
                 order = {
                     "order_ref": ref, "nonce": nonce, "created_at": stamp,
-                    "service_date": opt["service_date"], "juice": live["juice"],
+                    "service_date": opt["service_date"],
+                    "juice": label_for_juice(dict(live)) if live["juice"] == "Trial Juice" else live["juice"],
                     "portions": qty, "unit_price": live["unit_price"],
                     "total_price": qty * live["unit_price"], "delivery_slot": opt["slot"],
                     "building_flat": location, "name": name, "phone": phone,
@@ -365,7 +391,7 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
         """Validate the instant of submission; use while holding a write transaction."""
         day = date.fromisoformat(scheduled["service_date"])
         now = now_ist()
-        if day.weekday() > 4 or day not in service_days():
+        if day.weekday() == 6 or day not in service_days():
             return []
         valid = slots_for_date(day, now)
         return [{"value": day.isoformat() + "|" + slot} for slot in valid]
@@ -461,7 +487,7 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
     @staff_only
     def daily_admin():
         today = now_ist().date()
-        default_day = today if today.weekday() < 5 and now_ist().time() < time(17, 0) else next_weekday(today + timedelta(days=1))
+        default_day = today if today.weekday() < 6 and now_ist().time() < time(17, 0) else next_weekday(today + timedelta(days=1))
         selected = request.args.get("date", default_day.isoformat())
         try:
             selected = date.fromisoformat(selected).isoformat()
@@ -550,7 +576,9 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
             editor_day = selected
         menus = menus_for_dates([date.fromisoformat(editor_day)])
         menu = menus.get(editor_day) or {
-            "service_date": editor_day, "juice": "Pineapple", "unit_price": 99, "is_open": 0
+            "service_date": editor_day,
+            "juice": "Trial Juice" if date.fromisoformat(editor_day).weekday() == 5 else "Pineapple",
+            "trial_flavour": "", "unit_price": 99, "is_open": 0
         }
         return render_template(
             "daily_admin.html", csrf=csrf_token(), menu=menu, juices=JUICES,
@@ -589,6 +617,8 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
     def daily_update_menu():
         require_csrf()
         juice = request.form.get("juice", "")
+        trial_flavour = " ".join(request.form.get("trial_flavour", "").split())
+        accept_orders = request.form.get("is_open") == "yes"
         try:
             unit_price = int(request.form.get("unit_price", "0"))
             service_date = date.fromisoformat(request.form.get("service_date", ""))
@@ -596,17 +626,23 @@ def register_daily_orders(app, get_db, now_ist, csrf_token, require_csrf,
             abort(400)
         if (juice not in JUICES or not 50 <= unit_price <= 500 or
                 not now_ist().date() <= service_date <= now_ist().date()+timedelta(days=30) or
-                service_date.weekday() > 4):
+                service_date.weekday() == 6 or len(trial_flavour) > 80 or
+                (service_date.weekday() == 5 and
+                 (juice != "Trial Juice" or (accept_orders and not trial_flavour))) or
+                (service_date.weekday() < 5 and juice == "Trial Juice")):
             abort(400)
+        if juice != "Trial Juice":
+            trial_flavour = ""
         stamp = now_ist().isoformat(timespec="seconds")
         with get_db() as con:
-            con.execute("""INSERT INTO daily_menus(service_date,juice,unit_price,is_open,updated_at)
-                VALUES (?,?,?,?,?)
+            con.execute("""INSERT INTO daily_menus(service_date,juice,trial_flavour,unit_price,is_open,updated_at)
+                VALUES (?,?,?,?,?,?)
                 ON CONFLICT(service_date) DO UPDATE SET
-                juice=excluded.juice,unit_price=excluded.unit_price,
+                juice=excluded.juice,trial_flavour=excluded.trial_flavour,
+                unit_price=excluded.unit_price,
                 is_open=excluded.is_open,updated_at=excluded.updated_at""", (
-                    service_date.isoformat(), juice, unit_price,
-                    1 if request.form.get("is_open") == "yes" else 0, stamp))
+                    service_date.isoformat(), juice, trial_flavour, unit_price,
+                    1 if accept_orders else 0, stamp))
         flash("Menu saved. Existing orders retain the original fruit and price.", "success")
         return redirect(url_for("daily_admin", date=service_date.isoformat(),
                                 edit_date=service_date.isoformat()))

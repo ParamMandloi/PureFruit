@@ -500,6 +500,83 @@ class DailyOrdersTest(unittest.TestCase):
         self.assertEqual(slots_for_date(day + timedelta(days=1), dt(17, 0)),
                          ("morning", "afternoon"))
         self.assertEqual(slots_for_date(date(2026, 11, 22), dt(17, 0)), ())
+        saturday = date(2026, 11, 28)
+        def sat_dt(h, m):
+            return datetime.combine(saturday, time(h, m), tzinfo=tz)
+        self.assertEqual(slots_for_date(saturday, sat_dt(8, 59)), ("morning", "afternoon"))
+        self.assertEqual(slots_for_date(saturday, sat_dt(9, 0)), ("afternoon",))
+        self.assertEqual(slots_for_date(saturday, sat_dt(17, 0)), ())
+
+    def test_saturday_trial_can_be_ordered_with_named_flavour(self):
+        now = app_module.now_ist()
+        today = now.date()
+        saturday = today + timedelta(days=(5-today.weekday()) % 7)
+        if saturday == today and now.time() >= time(17, 0):
+            saturday += timedelta(days=7)
+        saturday_text = saturday.isoformat()
+        csrf = self.staff_login()
+        saved = self.client.post("/staff/daily/menu", data={
+            "csrf_token": csrf, "service_date": saturday_text,
+            "juice": "Trial Juice", "trial_flavour": "Pineapple + Mint",
+            "unit_price": "109", "is_open": "yes",
+        })
+        self.assertEqual(saved.status_code, 302)
+        response = self.client.get("/order")
+        self.assertIn(b"Trial Juice", response.data)
+        self.assertIn(b"Pineapple + Mint", response.data)
+        self.assertIn(b"SATURDAY TRIAL", response.data)
+        self.assertIn("₹109".encode("utf-8"), response.data)
+        with self.client.session_transaction() as sess:
+            fields = {
+                "csrf_token": sess["csrf_token"], "nonce": sess["daily_nonce"],
+                "delivery_option": saturday_text + ("|afternoon" if saturday == today else "|morning"),
+                "portions": "2", "building_flat": "Tower C / 1103",
+                "customer_name": "Trial Customer", "customer_mobile": "9876543210",
+            }
+        checkout = self.client.post("/order", data=fields, follow_redirects=False)
+        self.assertEqual(checkout.status_code, 303)
+        with app_module.get_db() as con:
+            order = con.execute("SELECT * FROM daily_orders WHERE service_date=?", (saturday_text,)).fetchone()
+        self.assertIsNotNone(order)
+        self.assertEqual(order["juice"], "Trial Juice · Pineapple + Mint")
+        self.assertEqual(order["unit_price"], 109)
+        self.assertEqual(order["total_price"], 218)
+        # A later Saturday recipe edit must not rewrite an existing order.
+        edited = self.client.post("/staff/daily/menu", data={
+            "csrf_token": csrf, "service_date": saturday_text,
+            "juice": "Trial Juice", "trial_flavour": "Orange + Ginger",
+            "unit_price": "119", "is_open": "yes",
+        })
+        self.assertEqual(edited.status_code, 302)
+        with app_module.get_db() as con:
+            old = con.execute("SELECT juice,total_price FROM daily_orders WHERE service_date=?",
+                              (saturday_text,)).fetchone()
+        self.assertEqual(old["juice"], "Trial Juice · Pineapple + Mint")
+        self.assertEqual(old["total_price"], 218)
+
+    def test_trial_requires_flavour_and_saturday_only(self):
+        today = app_module.now_ist().date()
+        saturday = today + timedelta(days=(5-today.weekday()) % 7)
+        if saturday == today and app_module.now_ist().time() >= time(17, 0):
+            saturday += timedelta(days=7)
+        csrf = self.staff_login()
+        base = {"csrf_token": csrf, "unit_price": "99", "is_open": "yes"}
+        missing_name = self.client.post("/staff/daily/menu", data={
+            **base, "service_date": saturday.isoformat(), "juice": "Trial Juice",
+            "trial_flavour": "",
+        })
+        self.assertEqual(missing_name.status_code, 400)
+        wrong_day = self.client.post("/staff/daily/menu", data={
+            **base, "service_date": self.service_date, "juice": "Trial Juice",
+            "trial_flavour": "Pineapple + Mint",
+        })
+        self.assertEqual(wrong_day.status_code, 400)
+        sunday = saturday + timedelta(days=1)
+        sunday_order = self.client.post("/staff/daily/menu", data={
+            **base, "service_date": sunday.isoformat(), "juice": "Trial Juice",
+            "trial_flavour": "Pineapple + Mint",
+        })
+        self.assertEqual(sunday_order.status_code, 400)
 
     def test_main_and_legacy_routes(self):
         self.open_menu()
@@ -666,6 +743,8 @@ class DailyOrdersTest(unittest.TestCase):
         self.assertIn(b"Seasonal fruit comes first", website.data)
         self.assertIn(b"indicative, not fixed", website.data)
         self.assertIn(b"Pomegranate juice", website.data)
+        self.assertIn(b"Trial Juice", website.data)
+        self.assertIn(b"Order Saturday Trial", website.data)
         self.assertIn(b"COMING SOON", website.data)
         self.assertIn(b"PARAMPRAKASH RAJENDRA MANDLOI KARTA", website.data)
         self.assertIn(b"9619140077", website.data)

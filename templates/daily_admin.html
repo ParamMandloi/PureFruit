@@ -249,6 +249,7 @@ main{padding:9px}h1{font-size:24px}header{margin-bottom:9px}
     <div><label for="juice">Juice</label><select name="juice" id="juice">
       {% for name in juices %}<option value="{{ name }}" {% if menu.juice==name %}selected{% endif %}>{{ name }}</option>{% endfor %}
     </select></div>
+    <div id="trial-flavour-field"><label for="trial_flavour">Saturday trial flavour / ingredients</label><input id="trial_flavour" name="trial_flavour" type="text" maxlength="80" value="{{ menu.trial_flavour or '' }}" placeholder="e.g. Pineapple + Mint" style="min-width:230px"><small class="muted">Shown before checkout; required to open Saturday orders.</small></div>
     <div><label for="price">₹ / 300 ml</label><input id="price" type="number" name="unit_price" value="{{ menu.unit_price }}" min="50" max="500" required style="width:90px"></div>
     <div><label for="is_open">Accept orders</label><select name="is_open" id="is_open">
       <option value="yes" {% if menu.is_open %}selected{% endif %}>Open</option>
@@ -256,6 +257,7 @@ main{padding:9px}h1{font-size:24px}header{margin-bottom:9px}
     </select></div>
     <button type="submit">Save menu</button>
   </form>
+  <p>Monday–Friday: regular juices. Saturday: Trial Juice only. Add the recipe's actual ingredients and choose its price each week; customers will see this before ordering. Sundays remain closed.</p>
   <p>After 5 PM, open the next service day's menu if you want customers to order for tomorrow.</p>
   {% if upcoming %}<table>
     <thead><tr><th>Date</th><th>Juice</th><th>Price</th><th>Accepting</th><th>Action</th></tr></thead>
@@ -275,4 +277,23 @@ main{padding:9px}h1{font-size:24px}header{margin-bottom:9px}
   <a class="button secondary" href="{{ url_for('daily_customers_page') }}">Customer history</a>
 </div>
 {% endif %}
-</main></body></html>
+</main>
+<script>
+(function(){
+  const dateField=document.getElementById('service_date');
+  const juiceField=document.getElementById('juice');
+  const openField=document.getElementById('is_open');
+  const wrapper=document.getElementById('trial-flavour-field');
+  const flavourField=document.getElementById('trial_flavour');
+  function syncTrial(){
+    const saturday=dateField.value && new Date(dateField.value+'T12:00:00').getDay()===6;
+    if(saturday && juiceField.value!=='Trial Juice') juiceField.value='Trial Juice';
+    if(!saturday && juiceField.value==='Trial Juice') juiceField.value='Pineapple';
+    wrapper.hidden=!saturday;
+    flavourField.required=Boolean(saturday && openField.value==='yes');
+  }
+  [dateField,juiceField,openField].forEach(el=>el.addEventListener('change',syncTrial));
+  syncTrial();
+})();
+</script>
+</body></html>

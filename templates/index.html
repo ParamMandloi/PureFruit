@@ -41,6 +41,11 @@
     .hero-lineup .hero-juice>img{display:block;width:100%;height:100%;max-height:none;max-width:none;object-fit:cover;filter:none}
     .hero-lineup .hero-actions .button-outline{border:1px solid #aaa;background:transparent;color:#333}
     .season-note{border:1px solid #dbdbd7;background:#f2f2ef;padding:14px 17px;border-radius:10px;font-size:13px;color:#555;line-height:1.6;margin:-14px 0 28px}
+    .saturday-trial{display:flex;align-items:center;justify-content:space-between;gap:18px;border:1px solid #dededa;border-radius:12px;padding:16px 18px;margin:-14px 0 30px}
+    .saturday-trial small{display:block;font-size:10px;font-weight:750;letter-spacing:.12em;color:#777}
+    .saturday-trial strong{display:block;margin:3px 0;font:700 20px Georgia,serif}
+    .saturday-trial p{font-size:12px;color:#666;margin:4px 0 0;line-height:1.6}
+    .saturday-trial .button{white-space:nowrap;border:1px solid #999;color:#333;background:transparent}
     .quality-section{margin:15px auto 48px}
     .quality-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
     .quality-card{background:#fff;border:1px solid #dededa;border-radius:13px;padding:20px}
@@ -66,6 +71,8 @@
       .hero-lineup .hero-actions{gap:8px}
       .hero-lineup .hero-actions .button{padding:9px 12px;font-size:12px;min-height:42px}
       .season-note{font-size:12px;margin:-6px 0 24px;padding:12px}
+      .saturday-trial{flex-direction:column;align-items:flex-start;gap:11px;margin:0 0 25px;padding:14px}
+      .saturday-trial .button{width:100%;text-align:center}
       .quality-grid,.consume-guide{grid-template-columns:1fr}
       .quality-card{padding:15px}
       .quality-section{margin-bottom:31px}
@@ -106,6 +113,7 @@
         <article class="fruit"><img src="{{ url_for('static', filename='fruit/watermelon.webp', v='visual-2') }}" alt="Watermelon" width="150" height="125" loading="eager" decoding="async"><small>FRIDAY</small><strong>Watermelon</strong></article>
       </div>
       <p class="season-note"><strong>Seasonal fruit comes first.</strong> This five-day menu is indicative, not fixed. Juices may change based on seasonal availability, fruit quality and taste. We always choose the best available seasonal fruits to make every bottle as fresh and flavourful as possible.</p>
+      <div class="saturday-trial"><div><small>EVERY SATURDAY · EXPERIMENTAL</small><strong>Trial Juice — discover a new blend</strong><p>We try a fresh recipe each Saturday. Flavour, ingredients and price are announced on the order page before booking. Saturday trials are separate from weekday subscriptions.</p></div><a class="button button-outline" href="{{ url_for('daily_order_page') }}">Order Saturday Trial</a></div>
     </section>
 
     <section class="wrap promise-section" aria-label="Our promise">
