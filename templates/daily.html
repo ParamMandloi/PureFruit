@@ -43,6 +43,11 @@ input[type=text],input[type=tel]{width:100%;min-height:42px;border:1px solid #d6
 .closed{margin:18px 0 3px;padding:17px;border-radius:9px;background:#f2f2f0;color:#626262;font-size:14px}
 [hidden]{display:none!important}.honeypot{position:absolute;left:-10000px}
 .forget{display:inline-block;margin:8px 0 0;border:0;background:none;padding:0;color:#737373;font-size:12px;text-decoration:underline;cursor:pointer}
+.trial-banner{display:flex;flex-direction:column;gap:2px;background:#f5f5f3;border:1px solid #dededb;border-radius:9px;padding:9px 11px;margin:8px 0 11px;font-size:11px;color:#666}
+.trial-banner strong{font-size:12px;color:#292929}
+.options .trial-slot{border-style:dashed}
+.options .trial-badge{font-size:9px;letter-spacing:.06em;font-weight:800;color:#444}
+.options .trial-flavour{font-size:10px;line-height:1.3;color:#555}
 </style>
 </head>
 <body class="pf-branded">
@@ -50,13 +55,14 @@ input[type=text],input[type=tel]{width:100%;min-height:42px;border:1px solid #d6
   <a class="brand pf-wordmark pf-order-brand" href="{{ url_for('homepage') }}" aria-label="PureFruit home"><span class="pf-wordmark__pure">PURE</span><span class="pf-wordmark__fruit">Fruit</span></a>
   <p class="tagline">Healthier happier you · L&amp;T Serene County</p>
   <section class="card">
-    <img id="fruit-image" class="fruit-img" src="{{ url_for('static',filename=image) if image else url_for('static',filename='fruit/purefruit-bottle.webp') }}" alt="{{ menu.juice }} juice">
+    <img id="fruit-image" class="fruit-img" src="{{ url_for('static',filename=image) if image else url_for('static',filename='fruit/purefruit-bottle.webp') }}" alt="{{ menu.label }}">
     <div class="inner {% if options %}has-order{% endif %}">
       <span class="eyebrow">FRESH COLD-PRESSED · 300 ML</span>
       <div class="price">
-        <div><h1 id="juice-name">{{ menu.juice }} Juice</h1><div class="muted">No added sugar or water</div></div>
+        <div><h1 id="juice-name">{{ menu.label }}</h1><div class="muted">No added sugar or water</div></div>
         <strong id="price">₹{{ menu.unit_price }}</strong>
       </div>
+      <div class="trial-banner"><strong>Saturday · Trial Juice</strong><span>A different experimental juice each Saturday. The flavour and price appear when the Saturday menu opens.</span></div>
       {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
       {% if options %}
       <form id="order-form" action="{{ url_for('daily_order_page') }}" method="post">
@@ -73,10 +79,13 @@ input[type=text],input[type=tel]{width:100%;min-height:42px;border:1px solid #d6
         <div class="options">
           {% for option in options %}
           <label><input type="radio" name="delivery_option" value="{{ option.value }}" {% if loop.first %}checked{% endif %}
-              data-price="{{ option.unit_price }}" data-juice="{{ option.juice }}" data-image="{{ url_for('static',filename=option.image) }}"
+              data-price="{{ option.unit_price }}" data-juice="{{ option.label }}" data-image="{{ url_for('static',filename=option.image or 'fruit/purefruit-bottle.webp') }}"
               required>
-            <span class="slot-card"><span class="slot-name">{{ option.heading }} · {{ 'Morning' if option.slot=='morning' else 'Evening' }}</span>
-              <span class="slot-time">{{ option.slot_label }}</span>{% if option.juice != menu.juice %}<small>{{ option.juice }}</small>{% endif %}
+            <span class="slot-card {{ 'trial-slot' if option.is_trial else '' }}">
+              {% if option.is_trial %}<small class="trial-badge">SATURDAY TRIAL</small>{% endif %}
+              <span class="slot-name">{{ option.heading }} · {{ 'Morning' if option.slot=='morning' else 'Evening' }}</span>
+              <span class="slot-time">{{ option.slot_label }}</span>
+              {% if option.is_trial or option.label != menu.label %}<small class="trial-flavour">{{ option.label }}</small>{% endif %}
             </span>
           </label>
           {% endfor %}
@@ -127,9 +136,9 @@ function refresh(){const n=Math.min(10,Math.max(1,Number.parseInt(qty.value,10)|
 function selectOption(){
 const selected=options.find(x=>x.checked);if(!selected)return;
 price=Number(selected.dataset.price);
-document.getElementById('juice-name').textContent=selected.dataset.juice+' Juice';
+document.getElementById('juice-name').textContent=selected.dataset.juice;
 document.getElementById('price').textContent='₹'+price;
-const img=document.getElementById('fruit-image');img.src=selected.dataset.image;img.alt=selected.dataset.juice+' juice';
+const img=document.getElementById('fruit-image');img.src=selected.dataset.image;img.alt=selected.dataset.juice;
 refresh();}
 options.forEach(x=>x.addEventListener('change',selectOption));
 document.getElementById('minus').addEventListener('click',()=>{qty.value=Math.max(1,Number(qty.value||1)-1);refresh();});
