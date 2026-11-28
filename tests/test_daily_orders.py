@@ -521,6 +521,8 @@ class DailyOrdersTest(unittest.TestCase):
         response = self.client.get("/order")
         self.assertIn(b"Trial Juice", response.data)
         self.assertIn(b"Pineapple + Mint", response.data)
+        self.assertIn(b"SATURDAY TRIAL", response.data)
+        self.assertIn("₹109".encode("utf-8"), response.data)
         with self.client.session_transaction() as sess:
             fields = {
                 "csrf_token": sess["csrf_token"], "nonce": sess["daily_nonce"],
@@ -738,6 +740,8 @@ class DailyOrdersTest(unittest.TestCase):
         self.assertIn(b"Seasonal fruit comes first", website.data)
         self.assertIn(b"indicative, not fixed", website.data)
         self.assertIn(b"Pomegranate juice", website.data)
+        self.assertIn(b"Trial Juice", website.data)
+        self.assertIn(b"Order Saturday Trial", website.data)
         self.assertIn(b"COMING SOON", website.data)
         self.assertIn(b"PARAMPRAKASH RAJENDRA MANDLOI KARTA", website.data)
         self.assertIn(b"9619140077", website.data)
